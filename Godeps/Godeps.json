@@ -1,0 +1,23 @@
+{
+	"ImportPath": "github.com/byxorna/serfbort",
+	"GoVersion": "go1.5.1",
+	"Deps": [
+		{
+			"ImportPath": "github.com/armon/go-metrics",
+			"Rev": "6c5fa0d8f48f4661c9ba8709799c88d425ad20f0"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/go-msgpack/codec",
+			"Rev": "fa3f63826f7c23912c15263591e65d54d080b458"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/memberlist",
+			"Rev": "28424fb38c7c3e30f366b72b1a55f690d318d8f3"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/serf/serf",
+			"Comment": "v0.6.4-46-ge493404",
+			"Rev": "e4934044417efc09bf4aec5b4862062380e00291"
+		}
+	]
+}
