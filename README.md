@@ -20,6 +20,12 @@ Screwing around with serf for a more secure, distributed deploy system for app c
 `check target [version]` - Queries the deploy at `target` and either returns its version, or "OK" if the optional `version` matches or ...?
 `list [selector of hostnames]` - Check status of hosts in cluster matching selector
 
+# TODO
+
+* slaves get batched messages, and delayed by a bunch of time
+* lots of `[ERR] memberlist: Failed to send ping: write udp [::]:7947->[::]:7946: sendto: no route to host` on agents
+* make agents and masters use keys for encryption
+
 # Notes
 
 ```

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 
@@ -10,10 +11,12 @@ import (
 )
 
 var (
-	c                        = serf.DefaultConfig()
-	mode          daemonMode = SlaveMode
-	masterAddress string
-	listenAddress string
+	c                         = serf.DefaultConfig()
+	mode           daemonMode = SlaveMode
+	masterAddress  string
+	listenAddress  string
+	name           string
+	defaultName, _ = os.Hostname()
 )
 
 type daemonMode int
@@ -21,11 +24,13 @@ type daemonMode int
 const (
 	MasterMode daemonMode = iota
 	SlaveMode
+	DeployMode
 )
 
 func init() {
 	flag.StringVar(&masterAddress, "master", "mymaster.company.net:7946", "Join the cluster by coordinating with this master")
 	flag.StringVar(&listenAddress, "listen", "localhost:7946", "Listen on the address for serf communication")
+	flag.StringVar(&name, "name", defaultName, "Name to use in serf protocol")
 	flag.Parse()
 }
 
@@ -34,6 +39,7 @@ func main() {
 		"role": "web",
 		"env":  "dev",
 	}
+	c.NodeName = name
 
 	fields := strings.Split(listenAddress, ":")
 	if len(fields) != 2 {
@@ -50,6 +56,9 @@ func main() {
 	//c.MemberlistConfig.AdvertiseAddr = x
 	//c.MemberlistConfig.AdvertisePort = y
 
+	evtCh := make(chan serf.Event, 64)
+	c.EventCh = evtCh
+
 	args := flag.Args()
 	if len(args) > 0 && args[0] == "master" {
 		mode = MasterMode
@@ -60,15 +69,13 @@ func main() {
 		log.Fatalf("Error creating Serf: %s", err)
 	}
 
-	if mode == SlaveMode {
-		log.Printf("Joining %s", masterAddress)
-		n, err := s.Join([]string{masterAddress}, false)
-		if n > 0 {
-			log.Printf("joined cluster with master %s and %d nodes", masterAddress, n)
-		}
-		if err != nil {
-			log.Fatalf("unable to join cluster with master %s: %v", masterAddress, err)
-		}
+	log.Printf("Joining %s", masterAddress)
+	n, err := s.Join([]string{masterAddress}, true)
+	if n > 0 {
+		log.Printf("joined cluster with master %s and %d nodes", masterAddress, n)
+	}
+	if err != nil {
+		log.Fatalf("unable to join cluster with master %s: %v", masterAddress, err)
 	}
 
 	members := s.Members()
@@ -85,6 +92,15 @@ func main() {
 	}
 
 	log.Print("Running...")
+	if mode == SlaveMode {
+		log.Print("running slave code")
+		slave := Slave{s, evtCh}
+		slave.Run()
+	} else {
+		log.Print("renning master code")
+		master := Master{s, evtCh}
+		master.Run()
+	}
 
 	//TODO this defer isnt running when ctrl-c'd
 	/*
