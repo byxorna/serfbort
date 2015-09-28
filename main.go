@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	//"github.com/hashicorp/serf/client"
 	"github.com/codegangsta/cli"
@@ -123,11 +124,11 @@ func main() {
 				//match on tags
 				cli.StringSliceFlag{
 					Name:  "tag",
-					Usage: `Filter by requiring tag on agent (tag=value) (can be a regexp like "val.*"!)`,
+					Usage: `Filter by requiring tag on agent (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
 				},
 				cli.StringFlag{
 					Name:  "name",
-					Usage: `Filter by requiring name of agent to match (can be a regexp like "web-1.*"!)`,
+					Usage: `Filter by requiring name of agent to match (can be a regexp like "web-1.*")`,
 				},
 			},
 			Usage:  "Check the status of all cluster members",
@@ -290,10 +291,13 @@ func DoStatus(c *cli.Context) {
 	}
 
 	fmt.Printf("%d nodes reporting\n", len(members))
-	fmt.Printf("name\taddr\tport\ttags\tstatus\n")
+	w := new(tabwriter.Writer)
+	w.Init(os.Stdout, 0, 8, 1, '\t', 0)
+	fmt.Fprintf(w, "name\taddr\tport\ttags\tstatus\n")
 	for _, member := range members {
-		fmt.Printf("%s\t%s\t%d\t%v\t%s\n", member.Name, member.Addr, member.Port, member.Tags, member.Status)
+		fmt.Fprintf(w, "%s\t%s\t%d\t%v\t%s\n", member.Name, member.Addr, member.Port, member.Tags, member.Status)
 	}
+	w.Flush()
 
 }
 
