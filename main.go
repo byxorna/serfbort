@@ -20,14 +20,25 @@ var (
 	config         Config
 )
 
+const (
+	//TODO read from build symbols?
+	VERSION = "0.1.0"
+)
+
 func main() {
 
 	app := cli.NewApp()
 	app.Name = "serfbort"
 	app.Usage = "deploy tool"
+	app.Version = VERSION
 	app.Action = cli.ShowAppHelp
 	//top level flags, common to all commands
 	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:   "config",
+			Usage:  "JSON config describing deploy targets, commands, etc",
+			EnvVar: "SERFBORT_CONFIG",
+		},
 		cli.StringFlag{
 			Name:  "rpc",
 			Value: "localhost:7373",
@@ -36,11 +47,6 @@ func main() {
 		cli.StringFlag{
 			Name:  "rpc-auth",
 			Usage: "Auth token to use for RPC",
-		},
-		cli.StringFlag{
-			Name:   "config",
-			Usage:  "JSON config describing deploy targets, commands, etc",
-			EnvVar: "SERFBORT_CONFIG",
 		},
 	}
 	// subcommands
@@ -68,19 +74,6 @@ func main() {
 			Action: StartMaster,
 		},
 		{
-			Name:   "verify",
-			Flags:  []cli.Flag{},
-			Usage:  "Verify a deploy",
-			Action: DoVerify,
-		},
-		{
-			Name:   "deploy",
-			Flags:  []cli.Flag{},
-			Usage:  "Perform a deploy",
-			Action: DoDeploy,
-			Before: LoadConfig,
-		},
-		{
 			Name: "agent",
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -106,6 +99,39 @@ func main() {
 			Usage:  "Run the serfbort agent",
 			Before: LoadConfig,
 			Action: StartAgent,
+		},
+
+		{
+			Name:   "deploy",
+			Flags:  []cli.Flag{},
+			Usage:  "Perform a deploy to a target",
+			Action: DoDeploy,
+			Before: LoadConfig,
+		},
+		{
+			Name:   "verify",
+			Flags:  []cli.Flag{},
+			Usage:  "Verify a deploy target",
+			Action: DoVerify,
+		},
+
+		{
+			Name: "status",
+			Flags: []cli.Flag{
+				//match on hostname pattern
+				//match on status
+				//match on tags
+				cli.StringSliceFlag{
+					Name:  "tag",
+					Usage: `Filter by requiring tag on agent (tag=value) (can be a regexp like "val.*"!)`,
+				},
+				cli.StringFlag{
+					Name:  "name",
+					Usage: `Filter by requiring name of agent to match (can be a regexp like "web-1.*"!)`,
+				},
+			},
+			Usage:  "Check the status of all cluster members",
+			Action: DoStatus,
 		},
 	}
 
@@ -187,6 +213,7 @@ func StartMaster(c *cli.Context) {
 	if c.IsSet("name") {
 		serfConfig.NodeName = c.String("name")
 	}
+	serfConfig.Tags = map[string]string{"master": "true"}
 
 	log.Printf("Starting master on %s", listenAddress)
 	log.Printf("Starting master RPC listener on %s", rpcAddress)
@@ -235,6 +262,41 @@ func DoVerify(c *cli.Context) {
 	panic("fuck implement me")
 }
 
+func DoStatus(c *cli.Context) {
+	rpcAddress := c.GlobalString("rpc")
+	rpcAuthKey := c.GlobalString("rpc-auth")
+	statusFilter := ""
+	nameFilter := c.String("name")
+	tagsUnparsed := c.StringSlice("tag")
+	tagsRequired := map[string]string{}
+	for _, t := range tagsUnparsed {
+		vals := strings.Split(t, "=")
+		if len(vals) != 2 {
+			log.Fatalf("tag must take parameters of the format tag=value! %s is fucked up", t)
+		}
+		tagsRequired[vals[0]] = vals[1]
+	}
+
+	log.Printf("Checking cluster status (tags: %v, name: %q)", tagsRequired, nameFilter)
+
+	rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
+	if err != nil {
+		log.Fatalf("Unable to connect to RPC at %s: %s", rpcAddress, err)
+	}
+	defer rpcclient.Close()
+	members, err := rpcclient.MembersFiltered(tagsRequired, statusFilter, nameFilter)
+	if err != nil {
+		log.Fatalf("Error retrieving members: %s", err)
+	}
+
+	fmt.Printf("%d nodes reporting\n", len(members))
+	fmt.Printf("name\taddr\tport\ttags\tstatus\n")
+	for _, member := range members {
+		fmt.Printf("%s\t%s\t%d\t%v\t%s\n", member.Name, member.Addr, member.Port, member.Tags, member.Status)
+	}
+
+}
+
 func DoDeploy(c *cli.Context) {
 	rpcAddress := c.GlobalString("rpc")
 	rpcAuthKey := c.GlobalString("rpc-auth")
@@ -263,8 +325,9 @@ func DoDeploy(c *cli.Context) {
 
 	rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
 	if err != nil {
-		log.Fatalf("Unable to connect to master at %s: %s", rpcAddress, err)
+		log.Fatalf("Unable to connect to RPC at %s: %s", rpcAddress, err)
 	}
+	defer rpcclient.Close()
 
 	err = rpcclient.UserEvent(cmd, []byte(message), false)
 	if err != nil {
