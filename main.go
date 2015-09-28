@@ -96,6 +96,10 @@ func main() {
 		if err != nil {
 			log.Fatalf("Unable to create agent: %s", err)
 		}
+
+		//register event handlers
+		a.RegisterEventHandler(MasterEventHandler{})
+
 		if err := a.Start(); err != nil {
 			log.Fatalf("Unable to start agent: %s", err)
 		}
@@ -116,12 +120,8 @@ func main() {
 			log.Fatal("Error starting RPC listener: %s", err)
 		}
 		agent.NewAgentIPC(a, rpcAuthKey, rpcListener, logOutput, logWriter)
-		//log.Printf("Running IPC: %s", ipc)
+		select {}
 
-		log.Print("1")
-		master := Master{a.Serf(), evtCh}
-		log.Print("2")
-		master.Run()
 	case DeployMode:
 		/*
 			rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
