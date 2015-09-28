@@ -11,7 +11,6 @@ type MasterEventHandler struct{}
 func (m MasterEventHandler) HandleEvent(e serf.Event) {
 	switch e.EventType() {
 	case serf.EventQuery:
-		//TODO implement responding to some queries
 		log.Printf("[EVENT] query: %s", e)
 	case serf.EventUser:
 		ue := e.(serf.UserEvent)
@@ -28,6 +27,9 @@ type AgentEventHandler struct {
 
 func (a AgentEventHandler) HandleEvent(e serf.Event) {
 	switch e.EventType() {
+	case serf.EventQuery:
+		//TODO
+		log.Printf("[QUERY] implement me")
 	case serf.EventUser:
 		ue := e.(serf.UserEvent)
 		log.Printf("[EVENT] user event %s with payload %q (coalescable: %t)", ue.Name, ue.Payload, ue.Coalesce)

@@ -22,6 +22,10 @@ Screwing around with serf for a more secure, distributed deploy system for app c
 
 # TODO
 
+* implement tag filtering for messages from deploy messages (encode target tags in payload?)
+* Keep track of events received in agents, to prevent duplicates? is this necessary
+* load config file describing targets, commands, and queries
+
 * slaves get batched messages, and delayed by a bunch of time
 * lots of `[ERR] memberlist: Failed to send ping: write udp [::]:7947->[::]:7946: sendto: no route to host` on agents
 * make agents and masters use keys for encryption
