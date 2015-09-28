@@ -20,7 +20,6 @@ var (
 	masterAddress  string
 	listenAddress  string // this is the interface that serf runs on
 	rpcAddress     string // this is the interface that serf's RPC runs on (localhost:7373)
-	name           string
 	defaultName, _ = os.Hostname()
 	rpcAuthKey     = ""
 )
@@ -34,20 +33,27 @@ const (
 )
 
 func init() {
+	var name string
+	var tagsFile string
 	flag.StringVar(&masterAddress, "master", "localhost:7946", "Join the cluster by coordinating with this master")
 	flag.StringVar(&listenAddress, "listen", "localhost:7946", "Listen on the address for serf communication")
 	flag.StringVar(&rpcAddress, "rpc", "localhost:7373", "RPC address of the serfbort master")
 	flag.StringVar(&name, "name", defaultName, "Name to use in serf protocol")
+	flag.StringVar(&tagsFile, "tags-file", "", "Load tags for agent from file (json format)")
 	flag.Parse()
-}
 
-func main() {
-	c.Tags = map[string]string{
-		"role": "web",
-		"env":  "dev",
+	if tagsFile != "" {
+		tags, err := loadTagsFromFile(tagsFile)
+		if err != nil {
+			log.Fatalf("Unable to load tags from file: %s", err)
+		}
+		c.Tags = tags
 	}
 	c.NodeName = name
 
+}
+
+func main() {
 	fields := strings.Split(listenAddress, ":")
 	if len(fields) != 2 {
 		log.Fatalf("-listen requires host:port! %s is not valid", listenAddress)
@@ -78,10 +84,9 @@ func main() {
 		}
 	}
 
-	log.Print("Running...")
 	switch mode {
 	case SlaveMode:
-		log.Print("Starting node")
+		log.Printf("Starting agent with tags %v", c.Tags)
 		//TODO pull this into the Agent type
 		s, err := serf.Create(c)
 		if err != nil {
@@ -148,23 +153,14 @@ func main() {
 			log.Fatalf("Unable to connect to master at %s: %s", rpcAddress, err)
 		}
 
-		log.Printf("Sending event to cluster...")
-		err = rpcclient.UserEvent("deploy", []byte("fuck"), false)
+		cmd := "deploy"
+		payload := []byte("fuck")
+		log.Printf("Sending %s command with payload %q", cmd, payload)
+		err = rpcclient.UserEvent(cmd, payload, false)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		//TODO FIXME just testing to see if we can get the non-rpc client working here...
-		/*
-			s := joinCluster()
-			log.Printf("Sending deploy message")
-			err = s.UserEvent("deploy", []byte("fuck"), false)
-			if err != nil {
-				log.Fatal(err)
-			}
-			select {}
-		*/
-
+		log.Print("OK")
 	}
 
 }
