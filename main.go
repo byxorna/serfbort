@@ -245,6 +245,12 @@ func DoDeploy(c *cli.Context) {
 	}
 	target := args[0]
 	args = args[1:]
+
+	_, ok := config.Targets[target]
+	if !ok {
+		log.Fatal("Unable to find target %q in the config", target)
+	}
+
 	var payload string
 	if len(args) > 0 {
 		payload = args[0]
