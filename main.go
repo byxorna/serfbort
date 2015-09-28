@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	//"github.com/hashicorp/serf/client"
-	"github.com/hashicorp/serf/command"
+	//	"github.com/hashicorp/serf/command"
 	"github.com/hashicorp/serf/command/agent"
 	"github.com/hashicorp/serf/serf"
 )
@@ -112,21 +112,26 @@ func main() {
 		master.Run()
 	case DeployMode:
 		/*
-			clientCfg := client.Config{
-				Addr:    listenAddress,
-				AuthKey: "",
-			} */
-		//rpcclient, err := client.NewRPCClient(listenAddress)
-		rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
-		if err != nil {
-			log.Fatalf("Unable to connect to master at %s: %s", rpcAddress, err)
-		}
+			rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
+			if err != nil {
+				log.Fatalf("Unable to connect to master at %s: %s", rpcAddress, err)
+			}
 
-		log.Printf("Sending event to cluster...")
-		err = rpcclient.UserEvent("deploy", []byte("fuck"), false)
+			log.Printf("Sending event to cluster...")
+			err = rpcclient.UserEvent("deploy", []byte("fuck"), false)
+			if err != nil {
+				log.Fatal(err)
+			}
+		*/
+
+		//TODO FIXME just testing to see if we can get the non-rpc client working here...
+		s := joinCluster()
+		log.Printf("Sending deploy message")
+		err = s.UserEvent("deploy", []byte("fuck"), false)
 		if err != nil {
 			log.Fatal(err)
 		}
+		select {}
 
 	}
 
