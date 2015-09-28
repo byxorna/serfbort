@@ -34,7 +34,7 @@ const (
 )
 
 func init() {
-	flag.StringVar(&masterAddress, "master", "mymaster.company.net:7946", "Join the cluster by coordinating with this master")
+	flag.StringVar(&masterAddress, "master", "localhost:7946", "Join the cluster by coordinating with this master")
 	flag.StringVar(&listenAddress, "listen", "localhost:7946", "Listen on the address for serf communication")
 	flag.StringVar(&rpcAddress, "rpc", "localhost:7373", "RPC address of the serfbort master")
 	flag.StringVar(&name, "name", defaultName, "Name to use in serf protocol")
@@ -93,15 +93,21 @@ func main() {
 		master := Master{s, evtCh}
 
 		log.Printf("Starting master RPC listener on %s", rpcAddress)
-		//TODO we should create an agent with agent.Create instead of this!
+		//Create(agentConf *Config, conf *serf.Config, logOutput io.Writer) (*Agent, error)
 		logOutput := os.Stdout
 		logWriter := agent.NewLogWriter(123)
-		a := agent.Agent{}
+		a, err := agent.Create(agent.DefaultConfig(), c, logWriter)
+		if err != nil {
+			log.Fatalf("Unable to create agent: %s", err)
+		}
+		//TODO we should create an agent with agent.Create instead of this!
+		//a := agent.Agent{}
 		rpcListener, err := net.Listen("tcp", rpcAddress)
 		if err != nil {
 			log.Fatal("Error starting RPC listener: %s", err)
 		}
-		agent.NewAgentIPC(&a, rpcAuthKey, rpcListener, logOutput, logWriter)
+		ipc := agent.NewAgentIPC(a, rpcAuthKey, rpcListener, logOutput, logWriter)
+		log.Printf("Running IPC: %s", ipc)
 
 		master.Run()
 	case DeployMode:
@@ -117,7 +123,7 @@ func main() {
 		}
 
 		log.Printf("Sending event to cluster...")
-		err = rpcclient.UserEvent("deploy", []byte{}, false)
+		err = rpcclient.UserEvent("deploy", []byte("fuck"), false)
 		if err != nil {
 			log.Fatal(err)
 		}
