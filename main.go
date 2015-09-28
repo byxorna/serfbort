@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	//"github.com/hashicorp/serf/client"
-	//	"github.com/hashicorp/serf/command"
+	"github.com/hashicorp/serf/command"
 	"github.com/hashicorp/serf/command/agent"
 	"github.com/hashicorp/serf/serf"
 )
@@ -82,14 +82,28 @@ func main() {
 	switch mode {
 	case SlaveMode:
 		log.Print("Starting node")
-		s := joinCluster()
-		defer leaveCluster()
-		slave := Slave{s, evtCh}
-		slave.Run()
+		//TODO pull this into the Agent type
+		s, err := serf.Create(c)
+		if err != nil {
+			log.Fatalf("Error creating Serf: %s", err)
+		}
+
+		log.Printf("Joining cluster by way of %s", masterAddress)
+		n, err := s.Join([]string{masterAddress}, true)
+		if n > 0 {
+			log.Printf("Cluster joined; %d nodes participating", n)
+		}
+		if err != nil {
+			log.Fatalf("unable to join cluster: %s", err)
+		}
+
+		a := AgentEventHandler{s, evtCh}
+		a.EventLoop()
+
 	case MasterMode:
 		log.Printf("Starting master on %s", listenAddress)
 		log.Printf("Starting master RPC listener on %s", rpcAddress)
-		//Create(agentConf *Config, conf *serf.Config, logOutput io.Writer) (*Agent, error)
+		//TODO pull this crap into the Master type
 		logOutput := os.Stderr
 		logWriter := agent.NewLogWriter(123)
 		a, err := agent.Create(agent.DefaultConfig(), c, logWriter)
@@ -113,6 +127,12 @@ func main() {
 			log.Fatalf("unable to join cluster: %s", err)
 		}
 
+		members := a.Serf().Members()
+		log.Printf("%d nodes currently in cluster:", len(members))
+		for _, m := range members {
+			log.Printf("  %s %s:%d %v %s", m.Name, m.Addr, m.Port, m.Tags, m.Status)
+		}
+
 		//TODO we should create an agent with agent.Create instead of this!
 		//a := agent.Agent{}
 		rpcListener, err := net.Listen("tcp", rpcAddress)
@@ -123,62 +143,32 @@ func main() {
 		select {}
 
 	case DeployMode:
-		/*
-			rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
-			if err != nil {
-				log.Fatalf("Unable to connect to master at %s: %s", rpcAddress, err)
-			}
+		rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
+		if err != nil {
+			log.Fatalf("Unable to connect to master at %s: %s", rpcAddress, err)
+		}
 
-			log.Printf("Sending event to cluster...")
-			err = rpcclient.UserEvent("deploy", []byte("fuck"), false)
-			if err != nil {
-				log.Fatal(err)
-			}
-		*/
-
-		//TODO FIXME just testing to see if we can get the non-rpc client working here...
-		s := joinCluster()
-		log.Printf("Sending deploy message")
-		err = s.UserEvent("deploy", []byte("fuck"), false)
+		log.Printf("Sending event to cluster...")
+		err = rpcclient.UserEvent("deploy", []byte("fuck"), false)
 		if err != nil {
 			log.Fatal(err)
 		}
-		select {}
 
-	}
-
-}
-
-func joinCluster() *serf.Serf {
-	s, err := serf.Create(c)
-	if err != nil {
-		log.Fatalf("Error creating Serf: %s", err)
-	}
-
-	log.Printf("Joining cluster by way of %s", masterAddress)
-	n, err := s.Join([]string{masterAddress}, true)
-	if n > 0 {
-		log.Printf("Cluster joined; %d nodes participating", n)
-	}
-	if err != nil {
-		log.Fatalf("unable to join cluster: %s", err)
-	}
-
-	members := s.Members()
-	log.Printf("%d nodes currently in cluster:", len(members))
-	for _, m := range members {
+		//TODO FIXME just testing to see if we can get the non-rpc client working here...
 		/*
-		   Name   string
-		   Addr   net.IP
-		   Port   uint16
-		   Tags   map[string]string
-		   Status MemberStatus
+			s := joinCluster()
+			log.Printf("Sending deploy message")
+			err = s.UserEvent("deploy", []byte("fuck"), false)
+			if err != nil {
+				log.Fatal(err)
+			}
+			select {}
 		*/
-		log.Printf("  %s %s:%d %v %s", m.Name, m.Addr, m.Port, m.Tags, m.Status)
+
 	}
-	return s
 
 }
+
 func leaveCluster() {
 	//TODO this defer isnt running when ctrl-c'd
 	/*
