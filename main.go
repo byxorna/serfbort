@@ -17,6 +17,7 @@ import (
 
 var (
 	defaultName, _ = os.Hostname()
+	config         Config
 )
 
 func main() {
@@ -77,6 +78,7 @@ func main() {
 			Flags:  []cli.Flag{},
 			Usage:  "Perform a deploy",
 			Action: DoDeploy,
+			Before: LoadConfig,
 		},
 		{
 			Name: "agent",
@@ -102,6 +104,7 @@ func main() {
 				},
 			},
 			Usage:  "Run the serfbort agent",
+			Before: LoadConfig,
 			Action: StartAgent,
 		},
 	}
@@ -263,6 +266,24 @@ func DoDeploy(c *cli.Context) {
 	}
 	log.Print("OK")
 
+}
+
+// loads the config into a global variable
+func LoadConfig(c *cli.Context) error {
+	if !c.GlobalIsSet("config") {
+		log.Fatalln("config is required")
+	}
+	configFile := c.GlobalString("config")
+	cfg, err := loadConfigFromFile(configFile)
+	if err != nil {
+		//TODO this is dumb that returning an error just causes the command to not be run
+		// it doesnt actually print any messages out
+		log.Fatalf("Unable to load config: %s", err)
+	}
+	config = cfg
+	log.Printf("Loaded %d targets from %s: %v", len(config.Targets), configFile, config.Targets)
+
+	return err
 }
 
 /*

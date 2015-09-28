@@ -20,3 +20,18 @@ func loadTagsFromFile(fileName string) (map[string]string, error) {
 	}
 	return tags, nil
 }
+
+func loadConfigFromFile(configFile string) (Config, error) {
+	var cfg Config
+	if _, err := os.Stat(configFile); err != nil {
+		return cfg, err
+	}
+	configRaw, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return cfg, err
+	}
+	if err := json.Unmarshal(configRaw, &cfg); err != nil {
+		return cfg, err
+	}
+	return cfg, nil
+}
