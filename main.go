@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -66,17 +67,16 @@ func main() {
 			Action: StartMaster,
 		},
 		{
-			Name: "deploy",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  "verify, v",
-					Usage: "Run verification of the deploy",
-				},
-			},
-			//TODO add subcommands dynamically based on a config?
-			Subcommands: []cli.Command{},
-			Usage:       "Perform a deploy",
-			Action:      DoDeploy,
+			Name:   "verify",
+			Flags:  []cli.Flag{},
+			Usage:  "Verify a deploy",
+			Action: DoVerify,
+		},
+		{
+			Name:   "deploy",
+			Flags:  []cli.Flag{},
+			Usage:  "Perform a deploy",
+			Action: DoDeploy,
 		},
 		{
 			Name: "agent",
@@ -227,19 +227,37 @@ func StartMaster(c *cli.Context) {
 	select {}
 
 }
+
+func DoVerify(c *cli.Context) {
+	panic("fuck implement me")
+}
+
 func DoDeploy(c *cli.Context) {
 	rpcAddress := c.GlobalString("rpc")
 	rpcAuthKey := c.GlobalString("rpc-auth")
-	cmd := "deploy"
-	payload := []byte("fuck")
+	cmd := c.Command.Name
+	args := c.Args()
+	if len(args) < 1 {
+		log.Fatalf("%s requires a deploy target", c.Command.Name)
+	}
+	target := args[0]
+	args = args[1:]
+	var payload string
+	if len(args) > 0 {
+		payload = args[0]
+	}
+	message := fmt.Sprintf("%s|%s", target, payload)
+	//TODO use msgpack to write payload
+	//TODO encode targeting info with payload (tags, host list, etc)
+
+	log.Printf("Deploying %s with payload %q (message %q)", target, payload, message)
 
 	rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
 	if err != nil {
 		log.Fatalf("Unable to connect to master at %s: %s", rpcAddress, err)
 	}
 
-	log.Printf("Sending %s command with payload %q", cmd, payload)
-	err = rpcclient.UserEvent(cmd, payload, false)
+	err = rpcclient.UserEvent(cmd, []byte(message), false)
 	if err != nil {
 		log.Fatal(err)
 	}
