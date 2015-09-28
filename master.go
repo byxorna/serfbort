@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/hashicorp/serf/serf"
 )
@@ -14,17 +13,19 @@ type Master struct {
 
 func (m *Master) Run() {
 	// tick every once in a while and broadcast a user message to every agent
-	ticker := time.NewTicker(time.Second * 15)
-	go func() {
-		for t := range ticker.C {
-			log.Println("Tick at", t)
-			//name string, payload []byte, coalesce bool) error
-			err := m.serf.UserEvent("test-event", []byte{}, false)
-			if err != nil {
-				log.Printf("unable to write event %s", err)
+	/*
+		ticker := time.NewTicker(time.Second * 15)
+		go func() {
+			for t := range ticker.C {
+				log.Println("Tick at", t)
+				//name string, payload []byte, coalesce bool) error
+				err := m.serf.UserEvent("test-event", []byte{}, false)
+				if err != nil {
+					log.Printf("unable to write event %s", err)
+				}
 			}
-		}
-	}()
+		}()
+	*/
 
 	for {
 		select {
