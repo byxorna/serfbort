@@ -16,6 +16,11 @@
 			"Rev": "6c5fa0d8f48f4661c9ba8709799c88d425ad20f0"
 		},
 		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-137-gbca61c4",
+			"Rev": "bca61c476e3c752594983e4c9bcd5f62fb09f157"
+		},
+		{
 			"ImportPath": "github.com/hashicorp/go-msgpack/codec",
 			"Rev": "fa3f63826f7c23912c15263591e65d54d080b458"
 		},
