@@ -88,27 +88,39 @@ func main() {
 		slave.Run()
 	case MasterMode:
 		log.Printf("Starting master on %s", listenAddress)
-		s := joinCluster()
-		defer leaveCluster()
-		master := Master{s, evtCh}
-
 		log.Printf("Starting master RPC listener on %s", rpcAddress)
 		//Create(agentConf *Config, conf *serf.Config, logOutput io.Writer) (*Agent, error)
-		logOutput := os.Stdout
+		logOutput := os.Stderr
 		logWriter := agent.NewLogWriter(123)
 		a, err := agent.Create(agent.DefaultConfig(), c, logWriter)
 		if err != nil {
 			log.Fatalf("Unable to create agent: %s", err)
 		}
+		if err := a.Start(); err != nil {
+			log.Fatalf("Unable to start agent: %s", err)
+		}
+
+		log.Printf("Joining cluster by way of %s", masterAddress)
+		n, err := a.Join([]string{masterAddress}, true)
+		if n > 0 {
+			log.Printf("Cluster joined; %d nodes participating", n)
+		}
+		if err != nil {
+			log.Fatalf("unable to join cluster: %s", err)
+		}
+
 		//TODO we should create an agent with agent.Create instead of this!
 		//a := agent.Agent{}
 		rpcListener, err := net.Listen("tcp", rpcAddress)
 		if err != nil {
 			log.Fatal("Error starting RPC listener: %s", err)
 		}
-		ipc := agent.NewAgentIPC(a, rpcAuthKey, rpcListener, logOutput, logWriter)
-		log.Printf("Running IPC: %s", ipc)
+		agent.NewAgentIPC(a, rpcAuthKey, rpcListener, logOutput, logWriter)
+		//log.Printf("Running IPC: %s", ipc)
 
+		log.Print("1")
+		master := Master{a.Serf(), evtCh}
+		log.Print("2")
 		master.Run()
 	case DeployMode:
 		/*
