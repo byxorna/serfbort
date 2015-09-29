@@ -301,7 +301,7 @@ func DoStatus(c *cli.Context) {
 func DoDeploy(c *cli.Context) {
 	rpcAddress := c.GlobalString("rpc")
 	rpcAuthKey := c.GlobalString("rpc-auth")
-	cmd := c.Command.Name
+	cmd := "deploy"
 	args := c.Args()
 	if len(args) < 1 {
 		log.Fatalf("%s requires a deploy target", c.Command.Name)

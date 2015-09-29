@@ -10,15 +10,15 @@ setup:
 	@echo "==== setup dependencies ==="
 	@go get -u "github.com/tools/godep"
 	@go get -u "github.com/golang/lint/golint"
-	@go get -u "github.com/kisielk/errcheck"
+#	@go get -u "github.com/kisielk/errcheck"
 
 # http://cloc.sourceforge.net/
 cloc:
 	@cloc --sdir='Godeps' --not-match-f='Makefile|_test.go' .
 
-errcheck:
-	@echo "=== errcheck ==="
-	@errcheck $(PACKAGENAME)/...
+#errcheck:
+#	@echo "=== errcheck ==="
+#	@errcheck $(PACKAGENAME)/...
 
 vet:
 	@echo "==== go vet ==="
