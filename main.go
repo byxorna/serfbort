@@ -117,7 +117,7 @@ func main() {
 		},
 
 		{
-			Name: "status",
+			Name: "cluster-status",
 			Flags: []cli.Flag{
 				cli.StringSliceFlag{
 					Name:  "tag",
@@ -129,7 +129,7 @@ func main() {
 				},
 			},
 			Usage:  "Check the status of all cluster members",
-			Action: DoStatus,
+			Action: DoClusterStatus,
 		},
 	}
 
@@ -260,7 +260,7 @@ func DoVerify(c *cli.Context) {
 	panic("fuck implement me")
 }
 
-func DoStatus(c *cli.Context) {
+func DoClusterStatus(c *cli.Context) {
 	rpcAddress := c.GlobalString("rpc")
 	rpcAuthKey := c.GlobalString("rpc-auth")
 	statusFilter := ""
