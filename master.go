@@ -93,20 +93,12 @@ func (m *MasterEventHandler) HandleEvent(e serf.Event) {
 		m.Lock()
 		defer m.Unlock()
 		m.Queries = append(m.Queries, evt)
-		//TODO broadcast this query? it came in over RPC...
-		log.Print("TODO broadcast this query!?????")
-		err := evt.Respond([]byte("fuck"))
-		if err != nil {
-			log.Printf("Unable to respond to query: %s", err)
-		}
-		//(name string, payload []byte, params *QueryParam) (*QueryResponse, error)
-		//TODO what query params? (filternodes, filtertags, requestack, timeout)
-		/* dont do this; it causes infinite queries to be handled by the master
-		_, err := m.Agent.Serf().Query(query.Name, query.Payload, nil)
-		if err != nil {
-			log.Printf("[ERROR] unable to rebroadcast query: %s", err)
-			return
-		}
+		// we dont respond to queries :)
+		/*
+			err := evt.Respond([]byte("fuck"))
+			if err != nil {
+				log.Printf("Unable to respond to query: %s", err)
+			}
 		*/
 	case serf.UserEvent:
 		log.Printf("%s: %s with payload %q (coalescable: %t)", evt.EventType(), evt.Name, evt.Payload, evt.Coalesce)
