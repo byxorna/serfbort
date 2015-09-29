@@ -153,7 +153,7 @@ func LoadConfig(c *cli.Context) error {
 		log.Fatalf("Unable to load config: %s", err)
 	}
 	config = cfg
-	log.Printf("Loaded %d targets from %s: %v", len(config.Targets), configFile, config.Targets)
+	//log.Printf("Loaded %d targets from %s: %v", len(config.Targets), configFile, config.Targets)
 
 	return err
 }

@@ -1,2 +1,3 @@
-.git
+# we allow .git in the image so we can do git operations at build time
+#.git
 serfbort

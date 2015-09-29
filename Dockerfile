@@ -1,8 +1,7 @@
 FROM golang:1.4.2
 MAINTAINER Gabe Conradi <gabe.conradi@gmail.com>
-RUN go install github.com/tools/godep
-COPY . /src
-WORKDIR /src
+COPY . /go/src/github.com/byxorna/serfbort
+WORKDIR /go/src/github.com/byxorna/serfbort
 RUN make setup && make
-
+ENTRYPOINT ["./serfbort"]
 

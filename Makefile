@@ -10,6 +10,7 @@ setup:
 	@echo "==== setup dependencies ==="
 	@go get -u "github.com/tools/godep"
 	@go get -u "github.com/golang/lint/golint"
+	@go get -u "golang.org/x/tools/cmd/vet"
 #	@go get -u "github.com/kisielk/errcheck"
 
 # http://cloc.sourceforge.net/

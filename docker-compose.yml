@@ -1,0 +1,19 @@
+master:
+  build: .
+  net: host
+  command: master -name master
+  ports: ["7373:7373"]
+
+slave1:
+  build: .
+  net: host
+  command: -config examples/config.json agent -name slave1 -master localhost:7946
+  #ports: ["7947:7947"]
+  #links: ["master"]
+
+slave2:
+  build: .
+  net: host
+  command: -config examples/config.json agent -name slave2 -listen localhost:7948 -master localhost:7946
+  #links: ["master"]
+  #ports: ["7948:7948"]
