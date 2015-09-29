@@ -47,9 +47,7 @@ func StartMaster(c *cli.Context) {
 	}
 
 	//register event handlers
-	meh := MasterEventHandler{
-	//Agent: a,
-	}
+	meh := MasterEventHandler{}
 	a.RegisterEventHandler(&meh)
 
 	if err := a.Start(); err != nil {
@@ -88,15 +86,19 @@ type MasterEventHandler struct {
 }
 
 func (m *MasterEventHandler) HandleEvent(e serf.Event) {
-	switch e.EventType() {
-	case serf.EventQuery:
-		query := e.(*serf.Query)
-		log.Printf("[EVENT] %s", query)
+	switch evt := e.(type) {
+	case *serf.Query:
+		//query := e.(*serf.Query)
+		log.Printf("%s: payload %q", evt.EventType(), evt.Payload)
 		m.Lock()
 		defer m.Unlock()
-		m.Queries = append(m.Queries, query)
+		m.Queries = append(m.Queries, evt)
 		//TODO broadcast this query? it came in over RPC...
-		log.Print("TODO broadcast this query!")
+		log.Print("TODO broadcast this query!?????")
+		err := evt.Respond([]byte("fuck"))
+		if err != nil {
+			log.Printf("Unable to respond to query: %s", err)
+		}
 		//(name string, payload []byte, params *QueryParam) (*QueryResponse, error)
 		//TODO what query params? (filternodes, filtertags, requestack, timeout)
 		/* dont do this; it causes infinite queries to be handled by the master
@@ -106,10 +108,11 @@ func (m *MasterEventHandler) HandleEvent(e serf.Event) {
 			return
 		}
 		*/
-	case serf.EventUser:
-		ue := e.(serf.UserEvent)
-		log.Printf("[EVENT] user event %s with payload %q (coalescable: %t)", ue.Name, ue.Payload, ue.Coalesce)
+	case serf.UserEvent:
+		log.Printf("%s: %s with payload %q (coalescable: %t)", evt.EventType(), evt.Name, evt.Payload, evt.Coalesce)
+	case serf.MemberEvent:
+		log.Printf("%s: %v", evt.EventType(), evt.Members)
 	default:
-		log.Printf("[EVENT] %s", e)
+		log.Printf("[EVENT] %s", evt.EventType())
 	}
 }
