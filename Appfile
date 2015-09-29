@@ -8,3 +8,9 @@ customization "go" {
   go_version = "1.4.2"
 }
 
+
+/*
+customization "dev" {
+  vagrantfile = "./Vagrantfile"
+}
+*/
