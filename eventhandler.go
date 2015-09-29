@@ -2,16 +2,26 @@ package main
 
 import (
 	"log"
+	"sync"
 
 	"github.com/hashicorp/serf/serf"
 )
 
-type MasterEventHandler struct{}
+type MasterEventHandler struct {
+	Queries []*serf.Query
+	sync.Mutex
+}
 
-func (m MasterEventHandler) HandleEvent(e serf.Event) {
+func (m *MasterEventHandler) HandleEvent(e serf.Event) {
 	switch e.EventType() {
 	case serf.EventQuery:
-		log.Printf("[EVENT] query: %s", e)
+		query := e.(*serf.Query)
+		log.Printf("[EVENT] %s", query)
+		m.Lock()
+		defer m.Unlock()
+		m.Queries = append(m.Queries, query)
+		//TODO broadcast this query? it came in over RPC...
+		log.Print("TODO broadcast this query!")
 	case serf.EventUser:
 		ue := e.(serf.UserEvent)
 		log.Printf("[EVENT] user event %s with payload %q (coalescable: %t)", ue.Name, ue.Payload, ue.Coalesce)
@@ -19,6 +29,31 @@ func (m MasterEventHandler) HandleEvent(e serf.Event) {
 		log.Printf("[EVENT] %s", e)
 	}
 }
+
+/****
+//---------------------- RIP ME OUT
+// AgentQueryHandler is an serf.EventHandler implementation
+type AgentQueryHandler struct {
+	Response []byte
+	Queries  []*serf.Query
+	sync.Mutex
+}
+
+func (h *AgentQueryHandler) HandleEvent(e serf.Event) {
+	query, ok := e.(*serf.Query)
+	if !ok {
+		return
+	}
+
+	h.Lock()
+	h.Queries = append(h.Queries, query)
+	h.Unlock()
+
+	query.Respond(h.Response)
+}
+
+//---------------------- END RIP ME OUT
+***/
 
 type AgentEventHandler struct {
 	serf    *serf.Serf
@@ -28,8 +63,22 @@ type AgentEventHandler struct {
 func (a AgentEventHandler) HandleEvent(e serf.Event) {
 	switch e.EventType() {
 	case serf.EventQuery:
-		//TODO
-		log.Printf("[QUERY] implement me")
+		log.Print("[QUERY] received a query")
+		query := e.(*serf.Query)
+		//TODO track this query!
+		log.Printf("[QUERY] received a query %v", query)
+		payload, err := decodeMessagePayload(query.Payload)
+		if err != nil {
+			log.Printf("[ERROR] unable to decode payload: %s", err)
+			return
+		}
+		log.Printf("[QUERY] parsed message: %s", payload)
+		err = query.Respond([]byte("Hey this is a response"))
+		if err != nil {
+			log.Printf("[ERROR] unable to respond to query: %s", err)
+			return
+		}
+
 	case serf.EventUser:
 		ue := e.(serf.UserEvent)
 		log.Printf("[TESTING] %v", ue)
@@ -38,7 +87,6 @@ func (a AgentEventHandler) HandleEvent(e serf.Event) {
 			log.Printf("[DEPLOY] received payload %q (coalescable: %t)", ue.Payload, ue.Coalesce)
 			messagePayload, err := decodeMessagePayload(ue.Payload)
 			if err != nil {
-				//TODO this should probably be a user query instead of a event...
 				log.Printf("[ERROR] unable to decode payload: %s", err)
 				return
 			}

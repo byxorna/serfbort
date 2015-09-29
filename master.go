@@ -46,7 +46,8 @@ func StartMaster(c *cli.Context) {
 	}
 
 	//register event handlers
-	a.RegisterEventHandler(MasterEventHandler{})
+	meh := MasterEventHandler{}
+	a.RegisterEventHandler(&meh)
 
 	if err := a.Start(); err != nil {
 		log.Fatalf("Unable to start agent: %s", err)
@@ -67,12 +68,11 @@ func StartMaster(c *cli.Context) {
 		log.Printf("  %s %s:%d %v %s", m.Name, m.Addr, m.Port, m.Tags, m.Status)
 	}
 
-	//TODO we should create an agent with agent.Create instead of this!
-	//a := agent.Agent{}
 	rpcListener, err := net.Listen("tcp", rpcAddress)
 	if err != nil {
 		log.Fatalf("Error starting RPC listener: %s", err)
 	}
+	//TODO should we listen for shutdown signals and close the agent properly?
 	agent.NewAgentIPC(a, rpcAuthKey, rpcListener, logOutput, logWriter)
 	select {}
 

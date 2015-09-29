@@ -33,6 +33,7 @@ func DoVerify(c *cli.Context) {
 		arg = args[0]
 	}
 
+	/*TODO using empty slices and maps causes every agent to filter these queries. WTF? omit for now...
 	filterNodes := parseHostArgs(c.String("hosts")) // filter the query for only nodes matching these
 
 	//filter query for only tags matching these
@@ -40,6 +41,8 @@ func DoVerify(c *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("Got filternodes %v and filtertags %v", filterNodes, filterTags)
+	*/
 
 	messagePayload, err := encodeMessagePayload(MessagePayload{
 		Target:   target,
@@ -61,20 +64,21 @@ func DoVerify(c *cli.Context) {
 	ackCh := make(chan string, CHANNEL_BUFFER)
 	respCh := make(chan client.NodeResponse, CHANNEL_BUFFER)
 	q := client.QueryParam{
-		FilterNodes: filterNodes,
-		FilterTags:  filterTags,
-		RequestAck:  true,
-		Timeout:     60 * time.Second,
-		Name:        "verify:" + target,
-		Payload:     messagePayload,
-		AckCh:       ackCh,
-		RespCh:      respCh,
+		//FilterNodes: filterNodes,
+		//FilterTags:  filterTags,
+		RequestAck: true,
+		Timeout:    60 * time.Second, // let serf set this default: serf.DefaultQueryTimeout()
+		Name:       "verify:" + target,
+		Payload:    messagePayload,
+		AckCh:      ackCh,
+		RespCh:     respCh,
 	}
 	err = rpcClient.Query(&q)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	//TODO determine how many nodes we _should_ be hearing from, so we can display percentages...
 	// track our incoming acks and responses
 	acks := []string{}
 	resps := []client.NodeResponse{}

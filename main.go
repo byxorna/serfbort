@@ -14,9 +14,9 @@ var (
 	config         Config
 
 	// these variables are set via -ldflags="-X main.myvar=fuck" in makefile
-	version string
-	branch  string
-	commit  string
+	version string = "???"
+	branch  string = "???"
+	commit  string = "???"
 )
 
 func main() {

@@ -26,6 +26,8 @@ Screwing around with serf for a more secure, distributed deploy system for app c
 * make agents respond to verify messages properly
 * convert deploy/verify from events to queries so they can return statuses
 * implement tag filtering for messages from deploy messages (encode target tags in payload?)
+* hook shutdown properly for master+agent so they send leave messages
+* make agents rejoin cluster (tune settings for rejoin?)
 
 
 * slaves get batched messages, and delayed by a bunch of time
