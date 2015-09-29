@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/codegangsta/cli"
 	"github.com/hashicorp/serf/command/agent"
@@ -46,7 +47,9 @@ func StartMaster(c *cli.Context) {
 	}
 
 	//register event handlers
-	meh := MasterEventHandler{}
+	meh := MasterEventHandler{
+	//Agent: a,
+	}
 	a.RegisterEventHandler(&meh)
 
 	if err := a.Start(); err != nil {
@@ -76,4 +79,37 @@ func StartMaster(c *cli.Context) {
 	agent.NewAgentIPC(a, rpcAuthKey, rpcListener, logOutput, logWriter)
 	select {}
 
+}
+
+type MasterEventHandler struct {
+	//Agent   *agent.Agent //TODO is this necessary? how do we rebroadcast a query that comes in over RPC?
+	Queries []*serf.Query
+	sync.Mutex
+}
+
+func (m *MasterEventHandler) HandleEvent(e serf.Event) {
+	switch e.EventType() {
+	case serf.EventQuery:
+		query := e.(*serf.Query)
+		log.Printf("[EVENT] %s", query)
+		m.Lock()
+		defer m.Unlock()
+		m.Queries = append(m.Queries, query)
+		//TODO broadcast this query? it came in over RPC...
+		log.Print("TODO broadcast this query!")
+		//(name string, payload []byte, params *QueryParam) (*QueryResponse, error)
+		//TODO what query params? (filternodes, filtertags, requestack, timeout)
+		/* dont do this; it causes infinite queries to be handled by the master
+		_, err := m.Agent.Serf().Query(query.Name, query.Payload, nil)
+		if err != nil {
+			log.Printf("[ERROR] unable to rebroadcast query: %s", err)
+			return
+		}
+		*/
+	case serf.EventUser:
+		ue := e.(serf.UserEvent)
+		log.Printf("[EVENT] user event %s with payload %q (coalescable: %t)", ue.Name, ue.Payload, ue.Coalesce)
+	default:
+		log.Printf("[EVENT] %s", e)
+	}
 }

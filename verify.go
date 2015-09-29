@@ -44,10 +44,11 @@ func DoVerify(c *cli.Context) {
 	log.Printf("Got filternodes %v and filtertags %v", filterNodes, filterTags)
 	*/
 
-	messagePayload, err := encodeMessagePayload(MessagePayload{
+	message := MessagePayload{
 		Target:   target,
 		Argument: arg,
-	})
+	}
+	messagePayload, err := encodeMessagePayload(message)
 	if err != nil {
 		log.Fatalf("Unable to encode payload: %s", err)
 	}
@@ -59,7 +60,7 @@ func DoVerify(c *cli.Context) {
 	}
 	defer rpcClient.Close()
 
-	log.Printf("Verifying %s with payload %q", target, messagePayload)
+	log.Printf("Verifying %s with payload %q", target, message)
 
 	ackCh := make(chan string, CHANNEL_BUFFER)
 	respCh := make(chan client.NodeResponse, CHANNEL_BUFFER)
@@ -67,7 +68,7 @@ func DoVerify(c *cli.Context) {
 		//FilterNodes: filterNodes,
 		//FilterTags:  filterTags,
 		RequestAck: true,
-		Timeout:    60 * time.Second, // let serf set this default: serf.DefaultQueryTimeout()
+		Timeout:    10 * time.Second, // let serf set this default: serf.DefaultQueryTimeout()
 		Name:       "verify:" + target,
 		Payload:    messagePayload,
 		AckCh:      ackCh,
@@ -105,7 +106,7 @@ func DoVerify(c *cli.Context) {
 		default: //chill out, squire! no messages
 		}
 	}
-	log.Printf("Got %d acks and %d responses in %s", len(acks), len(resps), q.Timeout)
+	log.Printf("Got %d acks and %d responses in %s", len(acks), len(resps), q.Timeout.String())
 
 	log.Print("TOOD need to stream responses! get # of nodes reporting in")
 }

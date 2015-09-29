@@ -61,3 +61,75 @@ func StartAgent(c *cli.Context) {
 	a := AgentEventHandler{s, evtCh}
 	a.EventLoop()
 }
+
+type AgentEventHandler struct {
+	serf    *serf.Serf
+	eventCh chan serf.Event
+}
+
+func (a AgentEventHandler) HandleEvent(e serf.Event) {
+	switch e.EventType() {
+	case serf.EventQuery:
+		log.Print("[QUERY] received a query")
+		query := e.(*serf.Query)
+		//TODO track this query!
+		log.Printf("[QUERY] received a query %v", query)
+		payload, err := decodeMessagePayload(query.Payload)
+		if err != nil {
+			log.Printf("[ERROR] unable to decode payload: %s", err)
+			return
+		}
+		log.Printf("[QUERY] parsed message: %s", payload)
+		err = query.Respond([]byte("Hey this is a response"))
+		if err != nil {
+			log.Printf("[ERROR] unable to respond to query: %s", err)
+			return
+		}
+
+	case serf.EventUser:
+		ue := e.(serf.UserEvent)
+		log.Printf("[TESTING] %v", ue)
+		switch ue.Name {
+		case "deploy":
+			log.Printf("[DEPLOY] received payload %q (coalescable: %t)", ue.Payload, ue.Coalesce)
+			messagePayload, err := decodeMessagePayload(ue.Payload)
+			if err != nil {
+				log.Printf("[ERROR] unable to decode payload: %s", err)
+				return
+			}
+			log.Printf("[DEPLOY] parsed deploy message: %s", messagePayload)
+
+			target, ok := config.Targets[messagePayload.Target]
+			if !ok {
+				log.Printf("[ERROR] No target configured named %q", messagePayload.Target)
+				return
+			}
+
+			log.Printf("[DEPLOY] target %s with message %q target %s", messagePayload.Target, messagePayload, target)
+			//TODO FIXME do something here...
+		case "verify":
+			//TODO implement me
+		default:
+			log.Printf("[WARN] unknown message received: %s with payload %q", ue.Name, ue.Payload)
+		}
+	}
+}
+
+func (a *AgentEventHandler) EventLoop() {
+	serfShutdownCh := a.serf.ShutdownCh()
+	for {
+		select {
+		case e := <-a.eventCh:
+			log.Printf("[INFO] agent: Received event: %s", e.String())
+			a.HandleEvent(e)
+
+		case <-serfShutdownCh:
+			log.Printf("[WARN] agent: Serf shutdown detected, quitting")
+			a.serf.Shutdown()
+			return
+		default:
+			// no work to do here!
+			//log.Printf("no work to do...")
+		}
+	}
+}
