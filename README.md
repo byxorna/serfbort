@@ -56,7 +56,18 @@ Screwing around with serf for a more secure, distributed deploy system for app c
 2015/09/27 15:20:38 Running...
 ```
 
-# Devving with Otto
+# Devving
+
+## Locally
+
+You need go 1.4.2, because `serf` isnt happy with 1.5.x (yet!). To build, install dependent go tools and do the build with `make`:
+
+```
+$ make setup
+$ make all
+```
+
+## With Otto
 
 Install `otto`: https://www.ottoproject.io/downloads.html
 
