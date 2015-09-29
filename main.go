@@ -19,11 +19,11 @@ import (
 var (
 	defaultName, _ = os.Hostname()
 	config         Config
-)
 
-const (
-	//TODO read from build symbols?
-	VERSION = "0.1.0"
+	// these variables are set via -ldflags="-X main.myvar=fuck" in makefile
+	version string
+	branch  string
+	commit  string
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "serfbort"
 	app.Usage = "deploy tool"
-	app.Version = VERSION
+	app.Version = fmt.Sprintf("%s (branch: %s commit: %s)", version, branch, commit)
 	app.Action = cli.ShowAppHelp
 	//top level flags, common to all commands
 	app.Flags = []cli.Flag{
@@ -249,7 +249,7 @@ func StartMaster(c *cli.Context) {
 	//a := agent.Agent{}
 	rpcListener, err := net.Listen("tcp", rpcAddress)
 	if err != nil {
-		log.Fatal("Error starting RPC listener: %s", err)
+		log.Fatalf("Error starting RPC listener: %s", err)
 	}
 	agent.NewAgentIPC(a, rpcAuthKey, rpcListener, logOutput, logWriter)
 	select {}
