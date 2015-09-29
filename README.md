@@ -2,6 +2,8 @@
 
 Screwing around with serf for a more secure, distributed deploy system for app code
 
+![serfbort](https://36.media.tumblr.com/98bcbec7cca08c51a417680069316eb9/tumblr_nu25k8iIWZ1upb1bro1_1280.jpg)
+
 ***NOTE*** This is a WIP, and I am most likely going to get bored of it and forget about it after 6 hours of work, and leave it in a broken, halfassed, unfinished state. Whatevs :)
 
 # Ideal features
@@ -55,4 +57,12 @@ Install `otto`: https://www.ottoproject.io/downloads.html
 ```
 $ otto compile
 $ otto dev
+```
+
+## With docker-compose
+
+On OSX, if you are using `docker-machine` and have `docker-compose` installed...
+```
+$ eval "$(docker-machine env dev)"
+$ docker-compose up
 ```
