@@ -32,7 +32,31 @@ func (a AgentEventHandler) HandleEvent(e serf.Event) {
 		log.Printf("[QUERY] implement me")
 	case serf.EventUser:
 		ue := e.(serf.UserEvent)
-		log.Printf("[EVENT] user event %s with payload %q (coalescable: %t)", ue.Name, ue.Payload, ue.Coalesce)
+		log.Printf("[TESTING] %v", ue)
+		switch ue.Name {
+		case "deploy":
+			log.Printf("[DEPLOY] received payload %q (coalescable: %t)", ue.Payload, ue.Coalesce)
+			deployMessage, err := decodeDeployMessage(ue.Payload)
+			if err != nil {
+				//TODO this should probably be a user query instead of a event...
+				log.Printf("[ERROR] unable to decode payload: %s", err)
+				return
+			}
+			log.Printf("[DEPLOY] parsed deploy message: %s", deployMessage)
+
+			target, ok := config.Targets[deployMessage.Target]
+			if !ok {
+				log.Printf("[ERROR] No target configured named %q", deployMessage.Target)
+				return
+			}
+
+			log.Printf("[DEPLOY] target %s with message %q target %s", deployMessage.Target, deployMessage, target)
+			//TODO FIXME do something here...
+		case "verify":
+			//TODO implement me
+		default:
+			log.Printf("[WARN] unknown message received: %s with payload %q", ue.Name, ue.Payload)
+		}
 	}
 }
 

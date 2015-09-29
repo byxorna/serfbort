@@ -119,9 +119,6 @@ func main() {
 		{
 			Name: "status",
 			Flags: []cli.Flag{
-				//match on hostname pattern
-				//match on status
-				//match on tags
 				cli.StringSliceFlag{
 					Name:  "tag",
 					Usage: `Filter by requiring tag on agent (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
@@ -314,18 +311,23 @@ func DoDeploy(c *cli.Context) {
 
 	_, ok := config.Targets[target]
 	if !ok {
-		log.Fatal("Unable to find target %q in the config", target)
+		log.Fatalf("Unable to find target %q in the config", target)
 	}
 
-	var payload string
+	var arg string
 	if len(args) > 0 {
-		payload = args[0]
+		arg = args[0]
 	}
-	message := fmt.Sprintf("%s|%s", target, payload)
-	//TODO use msgpack to write payload
-	//TODO encode targeting info with payload (tags, host list, etc)
+	messagePayload, err := encodeDeployMessage(DeployMessage{
+		Target:       target,
+		RequiredTags: map[string]string{},
+		Argument:     arg,
+	})
+	if err != nil {
+		log.Fatalf("Unable to encode payload: %s", err)
+	}
 
-	log.Printf("Deploying %s with payload %q (message %q)", target, payload, message)
+	log.Printf("Deploying %s with payload %q", target, messagePayload)
 
 	rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
 	if err != nil {
@@ -333,7 +335,7 @@ func DoDeploy(c *cli.Context) {
 	}
 	defer rpcclient.Close()
 
-	err = rpcclient.UserEvent(cmd, []byte(message), false)
+	err = rpcclient.UserEvent(cmd, messagePayload, false)
 	if err != nil {
 		log.Fatal(err)
 	}
