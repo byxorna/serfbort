@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/codegangsta/cli"
-	"github.com/hashicorp/serf/command"
+	"github.com/hashicorp/serf/client"
 )
 
 func DoDeploy(c *cli.Context) {
@@ -27,10 +27,9 @@ func DoDeploy(c *cli.Context) {
 	if len(args) > 0 {
 		arg = args[0]
 	}
-	messagePayload, err := encodeDeployMessage(DeployMessage{
-		Target:       target,
-		RequiredTags: map[string]string{},
-		Argument:     arg,
+	messagePayload, err := encodeMessagePayload(MessagePayload{
+		Target:   target,
+		Argument: arg,
 	})
 	if err != nil {
 		log.Fatalf("Unable to encode payload: %s", err)
@@ -38,13 +37,14 @@ func DoDeploy(c *cli.Context) {
 
 	log.Printf("Deploying %s with payload %q", target, messagePayload)
 
-	rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
+	rpcConfig := client.Config{Addr: rpcAddress, AuthKey: rpcAuthKey}
+	rpcClient, err := client.ClientFromConfig(&rpcConfig)
 	if err != nil {
 		log.Fatalf("Unable to connect to RPC at %s: %s", rpcAddress, err)
 	}
-	defer rpcclient.Close()
+	defer rpcClient.Close()
 
-	err = rpcclient.UserEvent(cmd, messagePayload, false)
+	err = rpcClient.UserEvent(cmd, messagePayload, false)
 	if err != nil {
 		log.Fatal(err)
 	}

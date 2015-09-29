@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"text/tabwriter"
 
-	//"github.com/hashicorp/serf/client"
 	"github.com/codegangsta/cli"
-	"github.com/hashicorp/serf/command"
+	"github.com/hashicorp/serf/client"
 )
 
 func DoClusterStatus(c *cli.Context) {
@@ -17,24 +15,20 @@ func DoClusterStatus(c *cli.Context) {
 	rpcAuthKey := c.GlobalString("rpc-auth")
 	statusFilter := ""
 	nameFilter := c.String("name")
-	tagsUnparsed := c.StringSlice("tag")
-	tagsRequired := map[string]string{}
-	for _, t := range tagsUnparsed {
-		vals := strings.Split(t, "=")
-		if len(vals) != 2 {
-			log.Fatalf("tag must take parameters of the format tag=value! %s is fucked up", t)
-		}
-		tagsRequired[vals[0]] = vals[1]
+	tagFilter, err := parseTagArgs(c.StringSlice("tag"))
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	log.Printf("Checking cluster status (tags: %v, name: %q)", tagsRequired, nameFilter)
+	log.Printf("Checking cluster status (tags: %v, name: %q)", tagFilter, nameFilter)
 
-	rpcclient, err := command.RPCClient(rpcAddress, rpcAuthKey)
+	rpcConfig := client.Config{Addr: rpcAddress, AuthKey: rpcAuthKey}
+	rpcClient, err := client.ClientFromConfig(&rpcConfig)
 	if err != nil {
 		log.Fatalf("Unable to connect to RPC at %s: %s", rpcAddress, err)
 	}
-	defer rpcclient.Close()
-	members, err := rpcclient.MembersFiltered(tagsRequired, statusFilter, nameFilter)
+	defer rpcClient.Close()
+	members, err := rpcClient.MembersFiltered(tagFilter, statusFilter, nameFilter)
 	if err != nil {
 		log.Fatalf("Error retrieving members: %s", err)
 	}

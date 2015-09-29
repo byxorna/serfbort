@@ -103,8 +103,17 @@ func main() {
 			Before: LoadConfig,
 		},
 		{
-			Name:   "verify",
-			Flags:  []cli.Flag{},
+			Name: "verify",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "hosts",
+					Usage: "Only verify these hosts (comma separated list)",
+				},
+				cli.StringSliceFlag{
+					Name:  "tag",
+					Usage: `Filter by requiring tag on agent (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
+				},
+			},
 			Usage:  "Verify a deploy target",
 			Action: DoVerify,
 		},
@@ -128,10 +137,6 @@ func main() {
 
 	app.Run(os.Args)
 
-}
-
-func DoVerify(c *cli.Context) {
-	panic("fuck implement me")
 }
 
 // loads the config into a global variable

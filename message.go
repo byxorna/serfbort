@@ -10,26 +10,24 @@ var (
 	msgpack codec.MsgpackHandle
 )
 
-type DeployMessage struct {
-	RequiredTags map[string]string `json:"rt"`
-	Target       string            `json:"t"`
-	Argument     string            `json:"a"`
-	Name         string            `json:"n"`
+type MessagePayload struct {
+	Target   string `json:"t"` // Target of the query or event
+	Argument string `json:"a"` // Optional argument (i.e. version, sha, etc)
 }
 
-func decodeDeployMessage(msg []byte) (DeployMessage, error) {
-	deployMessage := DeployMessage{}
+func decodeMessagePayload(msg []byte) (MessagePayload, error) {
+	MessagePayload := MessagePayload{}
 	msgpack.MapType = reflect.TypeOf(map[string]interface{}(nil))
 	decoder := codec.NewDecoderBytes(msg, &msgpack)
-	err := decoder.Decode(&deployMessage)
+	err := decoder.Decode(&MessagePayload)
 	if err != nil {
-		return deployMessage, err
+		return MessagePayload, err
 	}
 
-	return deployMessage, nil
+	return MessagePayload, nil
 }
 
-func encodeDeployMessage(m DeployMessage) ([]byte, error) {
+func encodeMessagePayload(m MessagePayload) ([]byte, error) {
 	b := []byte{}
 	msgpack.MapType = reflect.TypeOf(map[string]interface{}(nil))
 	encoder := codec.NewEncoderBytes(&b, &msgpack)
@@ -40,6 +38,6 @@ func encodeDeployMessage(m DeployMessage) ([]byte, error) {
 	return b, nil
 }
 
-func (m DeployMessage) String() string {
-	return fmt.Sprintf("target:%s arg:%s tags:%v name:%s", m.Target, m.Argument, m.RequiredTags, m.Name)
+func (m MessagePayload) String() string {
+	return fmt.Sprintf("target:%s arg:%s", m.Target, m.Argument)
 }

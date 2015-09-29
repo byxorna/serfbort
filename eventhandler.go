@@ -36,21 +36,21 @@ func (a AgentEventHandler) HandleEvent(e serf.Event) {
 		switch ue.Name {
 		case "deploy":
 			log.Printf("[DEPLOY] received payload %q (coalescable: %t)", ue.Payload, ue.Coalesce)
-			deployMessage, err := decodeDeployMessage(ue.Payload)
+			messagePayload, err := decodeMessagePayload(ue.Payload)
 			if err != nil {
 				//TODO this should probably be a user query instead of a event...
 				log.Printf("[ERROR] unable to decode payload: %s", err)
 				return
 			}
-			log.Printf("[DEPLOY] parsed deploy message: %s", deployMessage)
+			log.Printf("[DEPLOY] parsed deploy message: %s", messagePayload)
 
-			target, ok := config.Targets[deployMessage.Target]
+			target, ok := config.Targets[messagePayload.Target]
 			if !ok {
-				log.Printf("[ERROR] No target configured named %q", deployMessage.Target)
+				log.Printf("[ERROR] No target configured named %q", messagePayload.Target)
 				return
 			}
 
-			log.Printf("[DEPLOY] target %s with message %q target %s", deployMessage.Target, deployMessage, target)
+			log.Printf("[DEPLOY] target %s with message %q target %s", messagePayload.Target, messagePayload, target)
 			//TODO FIXME do something here...
 		case "verify":
 			//TODO implement me
