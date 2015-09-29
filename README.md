@@ -55,3 +55,12 @@ Screwing around with serf for a more secure, distributed deploy system for app c
 2015/09/27 15:20:38   tumblr-MacBookPro-b8cf72.gateway.pace.com :::7947 map[role:web env:dev] alive
 2015/09/27 15:20:38 Running...
 ```
+
+# Devving with Otto
+
+Install `otto`: https://www.ottoproject.io/downloads.html
+
+```
+$ otto compile
+$ otto dev
+```

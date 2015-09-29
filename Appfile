@@ -1,0 +1,10 @@
+application {
+  name = "serfbort"
+  type = "go"
+}
+
+customization "go" {
+  # need 1.4.2 to compile serf for now...
+  go_version = "1.4.2"
+}
+
