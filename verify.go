@@ -58,8 +58,8 @@ func DoVerify(c *cli.Context) {
 
 	log.Printf("Verifying %s with payload %q", target, messagePayload)
 
-	ackCh := make(chan<- string, CHANNEL_BUFFER)
-	respCh := make(chan<- client.NodeResponse, CHANNEL_BUFFER)
+	ackCh := make(chan string, CHANNEL_BUFFER)
+	respCh := make(chan client.NodeResponse, CHANNEL_BUFFER)
 	q := client.QueryParam{
 		FilterNodes: filterNodes,
 		FilterTags:  filterTags,
@@ -74,5 +74,34 @@ func DoVerify(c *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// track our incoming acks and responses
+	acks := []string{}
+	resps := []client.NodeResponse{}
+	pendingAcks, pendingResponses := true, true
+	for pendingAcks || pendingResponses {
+		select {
+		case ack, open := <-ackCh:
+			if !open {
+				// channel was closed, so lets get outta here
+				log.Print("Ack channel is closed!")
+				pendingAcks = false
+			} else {
+				log.Printf("got ack %v", ack)
+				acks = append(acks, ack)
+			}
+		case resp, open := <-respCh:
+			if !open {
+				log.Print("Response channel is closed")
+				pendingResponses = false
+			} else {
+				log.Printf("got resp %v", resp)
+				resps = append(resps, resp)
+			}
+		default: //chill out, squire! no messages
+		}
+	}
+	log.Printf("Got %d acks and %d responses in %s", len(acks), len(resps), q.Timeout)
+
 	log.Print("TOOD need to stream responses! get # of nodes reporting in")
 }

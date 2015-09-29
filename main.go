@@ -116,6 +116,7 @@ func main() {
 			},
 			Usage:  "Verify a deploy target",
 			Action: DoVerify,
+			Before: LoadConfig,
 		},
 
 		{
