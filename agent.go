@@ -78,13 +78,23 @@ func (a AgentEventHandler) HandleEvent(e serf.Event) {
 	case serf.EventQuery:
 		query := e.(*serf.Query)
 		log.Printf("[QUERY] received a query %v", query)
-		payload, err := decodeMessagePayload(query.Payload)
+		payload, err := DecodeMessagePayload(query.Payload)
 		if err != nil {
 			log.Printf("[ERROR] unable to decode payload: %s", err)
 			return
 		}
 		log.Printf("[QUERY] parsed message: %s", payload)
-		err = query.Respond([]byte("Hey this is a response"))
+		//TODO ensure the output is truncated so we dont exceed UDP datagram size
+		resp := QueryResponse{
+			Output: "FILL ME IN",
+			Status: 0,
+		}
+		respEnc, err := resp.Encode()
+		if err != nil {
+			log.Printf("[ERROR] unable to encode query response %v: %s", resp, err)
+			return
+		}
+		err = query.Respond(respEnc)
 		if err != nil {
 			log.Printf("[ERROR] unable to respond to query: %s", err)
 			return
@@ -95,24 +105,21 @@ func (a AgentEventHandler) HandleEvent(e serf.Event) {
 		switch ue.Name {
 		case "deploy":
 			log.Printf("[DEPLOY] received payload %q (coalescable: %t)", ue.Payload, ue.Coalesce)
-			messagePayload, err := decodeMessagePayload(ue.Payload)
+			message, err := DecodeMessagePayload(ue.Payload)
 			if err != nil {
 				log.Printf("[ERROR] unable to decode payload: %s", err)
 				return
 			}
-			log.Printf("[DEPLOY] parsed deploy message: %s", messagePayload)
+			log.Printf("[DEPLOY] parsed deploy message: %s", message)
 
-			target, ok := config.Targets[messagePayload.Target]
+			target, ok := config.Targets[message.Target]
 			if !ok {
-				log.Printf("[ERROR] No target configured named %q", messagePayload.Target)
+				log.Printf("[ERROR] No target configured named %q", message.Target)
 				return
 			}
 
-			log.Printf("[DEPLOY] target %s with message %q target %s", messagePayload.Target, messagePayload, target)
+			log.Printf("[DEPLOY] target %s with message %q target %s", message.Target, message, target)
 			//TODO FIXME do something here...
-
-		case "verify":
-			//TODO implement me
 
 		default:
 			log.Printf("[WARN] unknown message received: %s with payload %q", ue.Name, ue.Payload)

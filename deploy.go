@@ -1,7 +1,8 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"os"
 
 	"github.com/codegangsta/cli"
 	"github.com/hashicorp/serf/client"
@@ -13,41 +14,47 @@ func DoDeploy(c *cli.Context) {
 	cmd := "deploy"
 	args := c.Args()
 	if len(args) < 1 {
-		log.Fatalf("%s requires a deploy target", c.Command.Name)
+		fmt.Printf("%s requires a deploy target\n", c.Command.Name)
+		os.Exit(1)
 	}
 	target := args[0]
 	args = args[1:]
 
 	_, ok := config.Targets[target]
 	if !ok {
-		log.Fatalf("Unable to find target %q in the config", target)
+		fmt.Printf("Unable to find target %q in the config\n", target)
+		os.Exit(1)
 	}
 
 	var arg string
 	if len(args) > 0 {
 		arg = args[0]
 	}
-	messagePayload, err := encodeMessagePayload(MessagePayload{
+	message := MessagePayload{
 		Target:   target,
 		Argument: arg,
-	})
+	}
+	messageEnc, err := message.Encode()
 	if err != nil {
-		log.Fatalf("Unable to encode payload: %s", err)
+		fmt.Printf("Unable to encode payload: %s\n", err)
+		os.Exit(1)
 	}
 
-	log.Printf("Deploying %s with payload %q", target, messagePayload)
+	fmt.Printf("Deploying %s with payload %q\n", target, messageEnc)
 
 	rpcConfig := client.Config{Addr: rpcAddress, AuthKey: rpcAuthKey}
 	rpcClient, err := client.ClientFromConfig(&rpcConfig)
 	if err != nil {
-		log.Fatalf("Unable to connect to RPC at %s: %s", rpcAddress, err)
+		fmt.Printf("Unable to connect to RPC at %s: %s\n", rpcAddress, err)
+		os.Exit(1)
 	}
 	defer rpcClient.Close()
 
-	err = rpcClient.UserEvent(cmd, messagePayload, false)
+	err = rpcClient.UserEvent(cmd, messageEnc, false)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
-	log.Print("OK")
+	fmt.Println("OK")
 
 }

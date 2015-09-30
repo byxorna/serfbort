@@ -1,7 +1,9 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/codegangsta/cli"
@@ -17,14 +19,16 @@ func DoVerify(c *cli.Context) {
 	rpcAuthKey := c.GlobalString("rpc-auth")
 	args := c.Args()
 	if len(args) < 1 {
-		log.Fatalf("%s requires a verify target", c.Command.Name)
+		fmt.Printf("%s requires a verify target\n", c.Command.Name)
+		os.Exit(1)
 	}
 	target := args[0]
 	args = args[1:]
 
 	_, ok := config.Targets[target]
 	if !ok {
-		log.Fatalf("Unknown verify target %q (check your config)", target)
+		fmt.Printf("Unknown verify target %q (check your config)\n", target)
+		os.Exit(1)
 	}
 
 	// arg is like the version of the target to verify. Allow it to be empty
@@ -48,19 +52,21 @@ func DoVerify(c *cli.Context) {
 		Target:   target,
 		Argument: arg,
 	}
-	messagePayload, err := encodeMessagePayload(message)
+	messageEnc, err := message.Encode()
 	if err != nil {
-		log.Fatalf("Unable to encode payload: %s", err)
+		fmt.Printf("Unable to encode payload: %s\n", err)
+		os.Exit(1)
 	}
 
 	rpcConfig := client.Config{Addr: rpcAddress, AuthKey: rpcAuthKey}
 	rpcClient, err := client.ClientFromConfig(&rpcConfig)
 	if err != nil {
-		log.Fatalf("Unable to connect to RPC at %s: %s", rpcAddress, err)
+		fmt.Printf("Unable to connect to RPC at %s: %s\n", rpcAddress, err)
+		os.Exit(1)
 	}
 	defer rpcClient.Close()
 
-	log.Printf("Verifying %s with payload %q", target, message)
+	fmt.Printf("Verifying %s with payload %q\n", target, message)
 
 	ackCh := make(chan string, CHANNEL_BUFFER)
 	respCh := make(chan client.NodeResponse, CHANNEL_BUFFER)
@@ -70,13 +76,14 @@ func DoVerify(c *cli.Context) {
 		RequestAck: true,
 		Timeout:    10 * time.Second, // let serf set this default: serf.DefaultQueryTimeout()
 		Name:       "verify:" + target,
-		Payload:    messagePayload,
+		Payload:    messageEnc,
 		AckCh:      ackCh,
 		RespCh:     respCh,
 	}
 	err = rpcClient.Query(&q)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	//TODO determine how many nodes we _should_ be hearing from, so we can display percentages...
@@ -89,24 +96,31 @@ func DoVerify(c *cli.Context) {
 		case ack, open := <-ackCh:
 			if !open {
 				// channel was closed, so lets get outta here
-				log.Print("Ack channel is closed!")
+				fmt.Println("Ack channel is closed!")
 				pendingAcks = false
 			} else {
-				log.Printf("got ack %v", ack)
 				acks = append(acks, ack)
 			}
 		case resp, open := <-respCh:
 			if !open {
-				log.Print("Response channel is closed")
+				fmt.Println("Response channel is closed")
 				pendingResponses = false
 			} else {
-				log.Printf("got resp %v", resp)
+				queryResponse, err := DecodeQueryResponse(resp.Payload)
+				if err != nil {
+					fmt.Printf("Unable to decode response from %s: %s\n", resp.From, err)
+					continue
+				}
+				status := "OK   "
+				if queryResponse.Status != 0 {
+					status = "ERROR"
+				}
+				fmt.Printf("%s %s says %q\n", status, resp.From, strings.TrimSpace(queryResponse.Output))
 				resps = append(resps, resp)
 			}
 		default: //chill out, squire! no messages
 		}
 	}
-	log.Printf("Got %d acks and %d responses in %s", len(acks), len(resps), q.Timeout.String())
+	fmt.Printf("Got %d acks and %d responses in %s\n", len(acks), len(resps), q.Timeout.String())
 
-	log.Print("TOOD need to stream responses! get # of nodes reporting in")
 }
