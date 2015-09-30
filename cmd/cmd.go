@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -34,7 +33,7 @@ func New(target, scriptTemplate, arg string) Runner {
 }
 
 // Run will parameterize the script, run it, and return a reader over its output
-func (r Runner) Run() (io.Reader, error) {
+func (r Runner) Run() (*bytes.Buffer, error) {
 	tmpl, err := template.New(r.target).Parse(r.scriptTemplate)
 	if err != nil {
 		return nil, err

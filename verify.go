@@ -49,6 +49,7 @@ func DoVerify(c *cli.Context) {
 	*/
 
 	message := MessagePayload{
+		Action:   "verify",
 		Target:   target,
 		Argument: arg,
 	}
@@ -112,10 +113,12 @@ func DoVerify(c *cli.Context) {
 					continue
 				}
 				status := "OK   "
-				if queryResponse.Status != 0 {
+				output := strings.TrimSpace(queryResponse.Output)
+				if queryResponse.Err != nil {
 					status = "ERROR"
+					output = queryResponse.Err.Error()
 				}
-				fmt.Printf("%s %s says %q\n", status, resp.From, strings.TrimSpace(queryResponse.Output))
+				fmt.Printf("%s %s says %q\n", status, resp.From, output)
 				resps = append(resps, resp)
 			}
 		default: //chill out, squire! no messages

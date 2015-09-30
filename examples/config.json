@@ -1,12 +1,13 @@
 {
-  "deploy":{
+  "targets":{
     "app":{
-      "action":"/usr/bin/deploy myapp --sha _PAYLOAD_",
-      "verify":"/usr/bin/diff <(cd /myapp && git rev-parse HEAD) <(echo _PAYLOAD_)"
+      "deploy":"/usr/bin/deploy myapp --sha _PAYLOAD_",
+      "verify":"/usr/bin/diff <(cd /myapp && git rev-parse HEAD) <(echo '{{.Argument}}')",
+      "directory":"/tmp"
     },
     "config":{
-      "action":"/usr/bin/deploy config --sha _PAYLOAD_",
-      "verify":"/usr/bin/diff <(cd /config && git rev-parse HEAD) <(echo _PAYLOAD_)"
+      "deploy":"/usr/bin/deploy config --sha _PAYLOAD_",
+      "verify":"/usr/bin/diff <(cd /config && git rev-parse HEAD) <(echo '{{.Argument}}')"
     }
   }
 }

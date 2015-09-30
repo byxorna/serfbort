@@ -11,8 +11,12 @@ var (
 )
 
 type MessagePayload struct {
-	Target   string `json:"t"` // Target of the query or event
-	Argument string `json:"a"` // Optional argument (i.e. version, sha, etc)
+	Action string `json:"action"` // Action is command to run (i.e. deploy, verify)
+	Target string `json:"t"`      // Target of the query or event (i.e.
+
+	// Optional argument that will be parameterized into
+	// the action's script (i.e. version, sha, etc)
+	Argument string `json:"a"`
 }
 
 func DecodeMessagePayload(msg []byte) (MessagePayload, error) {
@@ -44,7 +48,7 @@ func (m MessagePayload) String() string {
 
 type QueryResponse struct {
 	Output string //output of query command
-	Status int    //exit status of query command
+	Err    error  //error, if any
 }
 
 func DecodeQueryResponse(msg []byte) (QueryResponse, error) {
@@ -71,5 +75,5 @@ func (q QueryResponse) Encode() ([]byte, error) {
 }
 
 func (q QueryResponse) String() string {
-	return fmt.Sprintf("output:%q status:%d", q.Output, q.Status)
+	return fmt.Sprintf("output:%q error:%q", q.Output, q.Err)
 }

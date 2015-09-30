@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
 
+	"github.com/byxorna/serfbort/cmd"
 	"github.com/codegangsta/cli"
 	"github.com/hashicorp/serf/serf"
 )
@@ -78,29 +80,65 @@ func (a AgentEventHandler) HandleEvent(e serf.Event) {
 	case serf.EventQuery:
 		query := e.(*serf.Query)
 		log.Printf("[QUERY] received a query %v", query)
-		payload, err := DecodeMessagePayload(query.Payload)
+
+		// we always wanna send a response to the query; failed or not
+		resp := QueryResponse{
+			Output: "",
+			Err:    nil,
+		}
+
+		message, err := DecodeMessagePayload(query.Payload)
 		if err != nil {
 			log.Printf("[ERROR] unable to decode payload: %s", err)
-			return
-		}
-		log.Printf("[QUERY] parsed message: %s", payload)
-		//TODO ensure the output is truncated so we dont exceed UDP datagram size
-		resp := QueryResponse{
-			Output: "FILL ME IN",
-			Status: 0,
-		}
-		respEnc, err := resp.Encode()
-		if err != nil {
-			log.Printf("[ERROR] unable to encode query response %v: %s", resp, err)
-			return
-		}
-		err = query.Respond(respEnc)
-		if err != nil {
-			log.Printf("[ERROR] unable to respond to query: %s", err)
+			resp.Err = err
+			respondToQuery(query, resp)
 			return
 		}
 
+		log.Printf("[QUERY] parsed message: %s", message)
+		//TODO ensure the output is truncated so we dont exceed UDP datagram size
+		target, ok := config.Targets[message.Target]
+		if !ok {
+			log.Printf("[ERROR] No target configured named %q", message.Target)
+			resp.Err = fmt.Errorf("No target named %q found in config", message.Target)
+			respondToQuery(query, resp)
+			return
+		}
+		//TODO this should check what the action is and use the script appropriate
+		scriptTemplate := ""
+		switch message.Action {
+		case "deploy":
+			scriptTemplate = target.DeployScript
+		case "verify":
+			scriptTemplate = target.VerifyScript
+		default:
+			//TODO should we respond with an error instead?
+			log.Printf("[ERROR] Unknown action %q! Unable to run script.", message.Action)
+			resp.Err = fmt.Errorf("Unknown action %q for %q", message.Action, message.Target)
+			respondToQuery(query, resp)
+			return
+		}
+		if scriptTemplate == "" {
+			log.Printf("[ERROR] No script configured to %s %s! Not running script.", message.Action, message.Target)
+			resp.Err = fmt.Errorf("No script configured to %s %s", message.Action, message.Target)
+			respondToQuery(query, resp)
+			return
+		}
+		runner := cmd.New(message.Target, scriptTemplate, message.Argument)
+		outputBuf, err := runner.Run()
+		if err != nil {
+			log.Printf("[ERROR] Error running %s %s script: %s", message.Target, message.Action, err)
+			resp.Err = err
+			respondToQuery(query, resp)
+			return
+		}
+
+		//TODO read only enough bytes to fill the response? should this return io.Reader instead of the buffer?
+		resp.Output = outputBuf.String()
+		respondToQuery(query, resp)
+
 	case serf.EventUser:
+		//TODO(gabe) GUT THIS! i dont think its strictly necessary anymore... everything should be a query, right?
 		ue := e.(serf.UserEvent)
 		switch ue.Name {
 		case "deploy":
@@ -145,4 +183,20 @@ func (a *AgentEventHandler) EventLoop() {
 			//log.Printf("no work to do...")
 		}
 	}
+}
+
+// TODO this shouldnt log, nor should it swallow errors, right?
+// this needs a refactor. - gabe
+func respondToQuery(query *serf.Query, resp QueryResponse) {
+	respEnc, err := resp.Encode()
+	if err != nil {
+		log.Printf("[ERROR] unable to encode query response %v: %s", resp, err)
+		return
+	}
+	err = query.Respond(respEnc)
+	if err != nil {
+		log.Printf("[ERROR] unable to respond to query: %s", err)
+		return
+	}
+
 }
