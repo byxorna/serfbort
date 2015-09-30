@@ -36,9 +36,9 @@ func DoClusterStatus(c *cli.Context) {
 	fmt.Printf("%d nodes reporting\n", len(members))
 	w := new(tabwriter.Writer)
 	w.Init(os.Stdout, 0, 8, 1, '\t', 0)
-	fmt.Fprintf(w, "name\taddr\tport\ttags\tstatus\n")
+	fmt.Fprintf(w, "name\taddr\ttags\tstatus\n")
 	for _, member := range members {
-		fmt.Fprintf(w, "%s\t%s\t%d\t%v\t%s\n", member.Name, member.Addr, member.Port, member.Tags, member.Status)
+		fmt.Fprintf(w, "%s\t%s:%d\t%v\t%s\n", member.Name, member.Addr, member.Port, member.Tags, member.Status)
 	}
 	w.Flush()
 

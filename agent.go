@@ -10,9 +10,8 @@ import (
 )
 
 func StartAgent(c *cli.Context) {
-	//TODO make this work with authkeys
 	//rpcAddress := c.GlobalString("rpc")
-	//rpcAuthKey := c.GlobalString("rpc-auth")
+	rpcAuthKey := c.GlobalString("rpc-auth")
 	masterAddress := c.String("master")
 	listenAddress := c.String("listen")
 
@@ -25,6 +24,14 @@ func StartAgent(c *cli.Context) {
 	bindPort, err := strconv.Atoi(fields[1])
 	if err != nil {
 		log.Fatalf("Unable to parse %s into port", fields[1])
+	}
+	if c.GlobalIsSet("rpc-auth") {
+		keyBytes, err := keyToBytes(rpcAuthKey)
+		if err != nil {
+			log.Fatalf("Invalid encryption key: %s", err)
+		}
+		// this needs to be 16, 24, or 32 bytes long. TODO validate this?
+		serfConfig.MemberlistConfig.SecretKey = keyBytes
 	}
 	serfConfig.MemberlistConfig.BindAddr = bindAddr
 	serfConfig.MemberlistConfig.BindPort = bindPort
@@ -43,7 +50,6 @@ func StartAgent(c *cli.Context) {
 		serfConfig.NodeName = c.String("name")
 	}
 	log.Printf("Starting agent with tags %v", serfConfig.Tags)
-	//TODO pull this into the Agent type
 	s, err := serf.Create(serfConfig)
 	if err != nil {
 		log.Fatalf("Error creating Serf: %s", err)
@@ -70,9 +76,7 @@ type AgentEventHandler struct {
 func (a AgentEventHandler) HandleEvent(e serf.Event) {
 	switch e.EventType() {
 	case serf.EventQuery:
-		log.Print("[QUERY] received a query")
 		query := e.(*serf.Query)
-		//TODO track this query!
 		log.Printf("[QUERY] received a query %v", query)
 		payload, err := decodeMessagePayload(query.Payload)
 		if err != nil {
@@ -88,7 +92,6 @@ func (a AgentEventHandler) HandleEvent(e serf.Event) {
 
 	case serf.EventUser:
 		ue := e.(serf.UserEvent)
-		log.Printf("[TESTING] %v", ue)
 		switch ue.Name {
 		case "deploy":
 			log.Printf("[DEPLOY] received payload %q (coalescable: %t)", ue.Payload, ue.Coalesce)
@@ -107,8 +110,10 @@ func (a AgentEventHandler) HandleEvent(e serf.Event) {
 
 			log.Printf("[DEPLOY] target %s with message %q target %s", messagePayload.Target, messagePayload, target)
 			//TODO FIXME do something here...
+
 		case "verify":
 			//TODO implement me
+
 		default:
 			log.Printf("[WARN] unknown message received: %s with payload %q", ue.Name, ue.Payload)
 		}
@@ -127,6 +132,7 @@ func (a *AgentEventHandler) EventLoop() {
 			log.Printf("[WARN] agent: Serf shutdown detected, quitting")
 			a.serf.Shutdown()
 			return
+
 		default:
 			// no work to do here!
 			//log.Printf("no work to do...")

@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/codegangsta/cli"
 	"github.com/hashicorp/serf/command/agent"
@@ -38,7 +37,6 @@ func StartMaster(c *cli.Context) {
 
 	log.Printf("Starting master on %s", listenAddress)
 	log.Printf("Starting master RPC listener on %s", rpcAddress)
-	//TODO pull this crap into the Master type
 	logOutput := os.Stderr
 	logWriter := agent.NewLogWriter(123)
 	a, err := agent.Create(agent.DefaultConfig(), serfConfig, logWriter)
@@ -79,26 +77,16 @@ func StartMaster(c *cli.Context) {
 
 }
 
-type MasterEventHandler struct {
-	//Agent   *agent.Agent //TODO is this necessary? how do we rebroadcast a query that comes in over RPC?
-	Queries []*serf.Query
-	sync.Mutex
-}
+type MasterEventHandler struct{}
 
 func (m *MasterEventHandler) HandleEvent(e serf.Event) {
 	switch evt := e.(type) {
 	case *serf.Query:
-		//query := e.(*serf.Query)
 		log.Printf("%s: payload %q", evt.EventType(), evt.Payload)
+		/* we dont need to keep track of queries on the master...
 		m.Lock()
 		defer m.Unlock()
 		m.Queries = append(m.Queries, evt)
-		// we dont respond to queries :)
-		/*
-			err := evt.Respond([]byte("fuck"))
-			if err != nil {
-				log.Printf("Unable to respond to query: %s", err)
-			}
 		*/
 	case serf.UserEvent:
 		log.Printf("%s: %s with payload %q (coalescable: %t)", evt.EventType(), evt.Name, evt.Payload, evt.Coalesce)

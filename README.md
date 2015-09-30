@@ -16,11 +16,9 @@ Screwing around with serf for a more secure, distributed deploy system for app c
 - trigger deploy only from host holding master keys (i.e. coordination node listens for RPC, but not webs)
 - support multiple "applications" (app, config, creds) as separate deploys
 
-## Behaviors
+# Examples
 
-`deploy target [selector or hostnames] version` - tells agents matching the selector or hostnames to deploy `version` of application `target`.
-`check target [version]` - Queries the deploy at `target` and either returns its version, or "OK" if the optional `version` matches or ...?
-`list [selector of hostnames]` - Check status of hosts in cluster matching selector
+TODO
 
 # TODO
 

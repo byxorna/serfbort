@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 )
@@ -22,4 +23,11 @@ func parseTagArgs(tagsUnparsed []string) (map[string]string, error) {
 func parseHostArgs(hostsUnparsed string) []string {
 	hosts := strings.Split(hostsUnparsed, ",")
 	return hosts
+}
+
+// converts a given encryption key (EncryptKey in serf parlance) to []byte
+// must be 16 characters (limitation imposed by serf)
+// head -c16 /dev/urandom | base64
+func keyToBytes(key string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(key)
 }
