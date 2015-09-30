@@ -31,7 +31,6 @@ func DoDeploy(c *cli.Context) {
 		arg = args[0]
 	}
 	message := MessagePayload{
-		Action:   "deploy",
 		Target:   target,
 		Argument: arg,
 	}

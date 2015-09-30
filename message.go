@@ -11,8 +11,8 @@ var (
 )
 
 type MessagePayload struct {
-	Action string `json:"action"` // Action is command to run (i.e. deploy, verify)
-	Target string `json:"t"`      // Target of the query or event (i.e.
+	//Action string `json:"action"` // Action is command to run (i.e. deploy, verify)
+	Target string `json:"t"` // Target of the query or event (i.e.
 
 	// Optional argument that will be parameterized into
 	// the action's script (i.e. version, sha, etc)

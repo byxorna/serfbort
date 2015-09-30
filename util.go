@@ -3,7 +3,10 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	"sort"
 	"strings"
+
+	"github.com/hashicorp/serf/client"
 )
 
 // parses a slice of strings that look like key=val key2=val2 into a map
@@ -31,3 +34,36 @@ func parseHostArgs(hostsUnparsed string) []string {
 func keyToBytes(key string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(key)
 }
+
+// FilterMembers takes a list of serf members and selects those that have a name in the
+// given list of names. Serf doesn't provide this functionality for client.MembersFiltered
+// so we implement it ourselves after the query is returned. If no names are provided,
+// return the list of members as is; no filtering takes place.
+func FilterMembers(members []client.Member, filterNames []string) []client.Member {
+	filteredMembers := []client.Member{}
+	if len(filterNames) > 0 {
+		sort.Sort(SortableStringSlice(filterNames))
+		for _, m := range members {
+			if Contains(filterNames, m.Name) {
+				filteredMembers = append(filteredMembers, m)
+			}
+		}
+	}
+	return filteredMembers
+}
+
+// Contains checks to see if a string provided is in the list of strings
+func Contains(l []string, val string) bool {
+	i := sort.Search(len(l), func(i int) bool { return l[i] >= val })
+	if i < len(l) && l[i] == val {
+		return true
+	} else {
+		return false
+	}
+}
+
+type SortableStringSlice []string
+
+func (a SortableStringSlice) Len() int           { return len(a) }
+func (a SortableStringSlice) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a SortableStringSlice) Less(i, j int) bool { return a[i] < a[j] }

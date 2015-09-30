@@ -37,19 +37,17 @@ func DoVerify(c *cli.Context) {
 		arg = args[0]
 	}
 
-	/*TODO using empty slices and maps causes every agent to filter these queries. WTF? omit for now...
 	filterNodes := parseHostArgs(c.String("hosts")) // filter the query for only nodes matching these
-
-	//filter query for only tags matching these
 	filterTags, err := parseTagArgs(c.StringSlice("tag"))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
-	log.Printf("Got filternodes %v and filtertags %v", filterNodes, filterTags)
-	*/
+
+	//filter query for only tags matching these
+	fmt.Printf("Got filternodes %v and filtertags %v\n", filterNodes, filterTags)
 
 	message := MessagePayload{
-		Action:   "verify",
 		Target:   target,
 		Argument: arg,
 	}
@@ -72,14 +70,20 @@ func DoVerify(c *cli.Context) {
 	ackCh := make(chan string, CHANNEL_BUFFER)
 	respCh := make(chan client.NodeResponse, CHANNEL_BUFFER)
 	q := client.QueryParam{
-		//FilterNodes: filterNodes,
-		//FilterTags:  filterTags,
 		RequestAck: true,
 		Timeout:    10 * time.Second, // let serf set this default: serf.DefaultQueryTimeout()
-		Name:       "verify:" + target,
+		Name:       "verify",
 		Payload:    messageEnc,
 		AckCh:      ackCh,
 		RespCh:     respCh,
+	}
+	// if we blindly set an empty map/slice here, we wont get any responses from agents :(
+	// so, we only set them if there is anything of value in them
+	if len(filterTags) > 0 {
+		q.FilterTags = filterTags
+	}
+	if len(filterNodes) > 0 {
+		q.FilterNodes = filterNodes
 	}
 	err = rpcClient.Query(&q)
 	if err != nil {
@@ -88,6 +92,16 @@ func DoVerify(c *cli.Context) {
 	}
 
 	//TODO determine how many nodes we _should_ be hearing from, so we can display percentages...
+	//TODO should this list come from collins/a source of truth? Maybe not...
+	clusterMembers, err := rpcClient.MembersFiltered(filterTags, "", "")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	// filter by node name manually, cause MembersFiltered doesnt take a list of hosts (only a name regexp)
+	expectedClusterMembers := FilterMembers(clusterMembers, filterNodes)
+	fmt.Printf("%d members reporting in (filtered from %d)\n", len(expectedClusterMembers), len(clusterMembers))
+
 	// track our incoming acks and responses
 	acks := []string{}
 	resps := []client.NodeResponse{}

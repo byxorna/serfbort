@@ -22,11 +22,6 @@ TODO
 
 # TODO
 
-* agents arent responding to messages properly. makes me think that the master's agent ipc isnt sending queries along... (it does forward events!)
-
-* make agents respond to deploy messages properly
-* make agents respond to verify messages properly
-* convert deploy/verify from events to queries so they can return statuses
 * implement tag filtering for messages from deploy messages (encode target tags in payload?)
 * hook shutdown properly for master+agent so they send leave messages
 * make agents rejoin cluster (tune settings for rejoin?)

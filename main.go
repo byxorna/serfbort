@@ -122,13 +122,13 @@ func main() {
 		{
 			Name: "cluster-status",
 			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "hosts",
+					Usage: "Only verify these hosts (comma separated list)",
+				},
 				cli.StringSliceFlag{
 					Name:  "tag",
 					Usage: `Filter by requiring tag on agent (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
-				},
-				cli.StringFlag{
-					Name:  "name",
-					Usage: `Filter by requiring name of agent to match (can be a regexp like "web-1.*")`,
 				},
 			},
 			Usage:  "Check the status of all cluster members",

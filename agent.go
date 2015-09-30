@@ -80,62 +80,7 @@ func (a AgentEventHandler) HandleEvent(e serf.Event) {
 	case serf.EventQuery:
 		query := e.(*serf.Query)
 		log.Printf("[QUERY] received a query %v", query)
-
-		// we always wanna send a response to the query; failed or not
-		resp := QueryResponse{
-			Output: "",
-			Err:    nil,
-		}
-
-		message, err := DecodeMessagePayload(query.Payload)
-		if err != nil {
-			log.Printf("[ERROR] unable to decode payload: %s", err)
-			resp.Err = err
-			respondToQuery(query, resp)
-			return
-		}
-
-		log.Printf("[QUERY] parsed message: %s", message)
-		//TODO ensure the output is truncated so we dont exceed UDP datagram size
-		target, ok := config.Targets[message.Target]
-		if !ok {
-			log.Printf("[ERROR] No target configured named %q", message.Target)
-			resp.Err = fmt.Errorf("No target named %q found in config", message.Target)
-			respondToQuery(query, resp)
-			return
-		}
-		//TODO this should check what the action is and use the script appropriate
-		scriptTemplate := ""
-		switch message.Action {
-		case "deploy":
-			scriptTemplate = target.DeployScript
-		case "verify":
-			scriptTemplate = target.VerifyScript
-		default:
-			//TODO should we respond with an error instead?
-			log.Printf("[ERROR] Unknown action %q! Unable to run script.", message.Action)
-			resp.Err = fmt.Errorf("Unknown action %q for %q", message.Action, message.Target)
-			respondToQuery(query, resp)
-			return
-		}
-		if scriptTemplate == "" {
-			log.Printf("[ERROR] No script configured to %s %s! Not running script.", message.Action, message.Target)
-			resp.Err = fmt.Errorf("No script configured to %s %s", message.Action, message.Target)
-			respondToQuery(query, resp)
-			return
-		}
-		runner := cmd.New(message.Target, scriptTemplate, message.Argument)
-		outputBuf, err := runner.Run()
-		if err != nil {
-			log.Printf("[ERROR] Error running %s %s script: %s", message.Target, message.Action, err)
-			resp.Err = err
-			respondToQuery(query, resp)
-			return
-		}
-
-		//TODO read only enough bytes to fill the response? should this return io.Reader instead of the buffer?
-		resp.Output = outputBuf.String()
-		respondToQuery(query, resp)
+		go handleQuery(query)
 
 	case serf.EventUser:
 		//TODO(gabe) GUT THIS! i dont think its strictly necessary anymore... everything should be a query, right?
@@ -199,4 +144,67 @@ func respondToQuery(query *serf.Query, resp QueryResponse) {
 		return
 	}
 
+}
+
+// HandleQuery will, given a query, decode its payload and respond to it as appropriate.
+// Ideally should be run in a goroutine in an event loop, so it does not return anything
+// of value.
+func handleQuery(query *serf.Query) {
+	// we always wanna send a response to the query; failed or not
+	resp := QueryResponse{
+		Output: "",
+		Err:    nil,
+	}
+	// this makes more sense than encoding duplicate information in the payload of the query.
+	action := query.Name
+	message, err := DecodeMessagePayload(query.Payload)
+	if err != nil {
+		log.Printf("[ERROR] unable to decode payload: %s", err)
+		resp.Err = err
+		respondToQuery(query, resp)
+		return
+	}
+
+	log.Printf("[QUERY] parsed message: %s", message)
+	//TODO ensure the output is truncated so we dont exceed UDP datagram size? will serf do this
+	// for us? or should we be more clever?
+	target, ok := config.Targets[message.Target]
+	if !ok {
+		log.Printf("[ERROR] No target configured named %q", message.Target)
+		resp.Err = fmt.Errorf("No target named %q found in config", message.Target)
+		respondToQuery(query, resp)
+		return
+	}
+
+	//TODO this should check what the action is and use the script appropriate
+	scriptTemplate := ""
+	switch action {
+	case "deploy":
+		scriptTemplate = target.DeployScript
+	case "verify":
+		scriptTemplate = target.VerifyScript
+	default:
+		log.Printf("[ERROR] Unknown action %q! Unable to run script.", action)
+		resp.Err = fmt.Errorf("Unknown action %q for %q", action, message.Target)
+		respondToQuery(query, resp)
+		return
+	}
+	if scriptTemplate == "" {
+		log.Printf("[ERROR] No script configured to %s %s! Not running script.", action, message.Target)
+		resp.Err = fmt.Errorf("No script configured to %s %s", action, message.Target)
+		respondToQuery(query, resp)
+		return
+	}
+	runner := cmd.New(message.Target, scriptTemplate, message.Argument)
+	outputBuf, err := runner.Run()
+	if err != nil {
+		log.Printf("[ERROR] Error running %s %s script: %s", message.Target, action, err)
+		resp.Err = err
+		respondToQuery(query, resp)
+		return
+	}
+
+	//TODO read only enough bytes to fill the response? should this return io.Reader instead of the buffer?
+	resp.Output = outputBuf.String()
+	respondToQuery(query, resp)
 }
