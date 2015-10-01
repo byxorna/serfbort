@@ -7,7 +7,7 @@ PACKAGENAME=`go list .`
 all: test build
 
 setup:
-	@echo "==== setup dependencies ==="
+	@echo "-> install build deps"
 	@go get -u "github.com/tools/godep"
 	@go get -u "github.com/golang/lint/golint"
 	@go get -u "golang.org/x/tools/cmd/vet"
@@ -18,31 +18,31 @@ cloc:
 	@cloc --sdir='Godeps' --not-match-f='Makefile|_test.go' .
 
 #errcheck:
-#	@echo "=== errcheck ==="
+#	@echo "-> errcheck"
 #	@errcheck $(PACKAGENAME)/...
 
 vet:
-	@echo "==== go vet ==="
+	@echo "-> go vet"
 	@go vet ./...
 
 lint:
-	@echo "==== go lint ==="
+	@echo "-> go lint"
 	@golint ./**/*.go
 
 fmt:
-	@echo "=== go fmt ==="
+	@echo "-> go fmt"
 	@go fmt ./...
 
 install: test
-	@echo "=== go install ==="
+	@echo "-> go install"
 	@godep go install -ldflags=$(GOLDFLAGS)
 
 build:
-	@echo "=== go build ==="
+	@echo "-> go build"
 	@godep go build -ldflags=$(GOLDFLAGS)
 
 test: fmt vet lint errcheck
-	@echo "=== go test ==="
+	@echo "-> go test"
 	@godep go test ./... -cover
 
 deploy: test
