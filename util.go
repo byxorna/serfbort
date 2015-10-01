@@ -49,9 +49,7 @@ func FilterMembers(members []client.Member, filterNames []string) []client.Membe
 	filteredMembers := []client.Member{}
 	sort.Sort(SortableStringSlice(filterNames))
 	for _, m := range members {
-		fmt.Println(m)
 		if Contains(filterNames, m.Name) {
-			fmt.Println(m.Name + " is in list of names")
 			filteredMembers = append(filteredMembers, m)
 		}
 	}

@@ -1,8 +1,8 @@
 {
   "targets":{
     "app":{
-      "deploy":"/usr/bin/deploy myapp --sha _PAYLOAD_",
-      "verify":"/usr/bin/diff <(cd /myapp && git rev-parse HEAD) <(echo '{{.Argument}}')",
+      "deploy":"echo 'deployed {{.Argument}}'",
+      "verify":"echo 'failed to verify {{.Argument}}' && exit 1",
       "directory":"/tmp"
     },
     "config":{

@@ -57,7 +57,7 @@ func DoQuery(action string) func(c *cli.Context) {
 		}
 
 		//filter query for only tags matching these
-		fmt.Printf("Got filternodes %v and filtertags %v\n", filterNodes, filterTags)
+		//fmt.Printf("Got filternodes %v and filtertags %v\n", filterNodes, filterTags)
 
 		message := MessagePayload{
 			Target:   target,
