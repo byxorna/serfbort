@@ -14,12 +14,15 @@ var (
 	CHANNEL_BUFFER = 20 // how deep the channel buffer for Ack and Response channels should be (TODO FIXME)
 )
 
-func DoVerify(c *cli.Context) {
+// DoQuery will perform a query named c.Command.Name with provided parameters, and await responses.
+func DoQuery(c *cli.Context) {
 	rpcAddress := c.GlobalString("rpc")
 	rpcAuthKey := c.GlobalString("rpc-auth")
+	timeout := 10 * time.Second //TODO(gabe) make this configurable
+	action := c.Command.Name
 	args := c.Args()
 	if len(args) < 1 {
-		fmt.Printf("%s requires a verify target\n", c.Command.Name)
+		fmt.Printf("%s requires a target\n", action)
 		os.Exit(1)
 	}
 	target := args[0]
@@ -27,11 +30,11 @@ func DoVerify(c *cli.Context) {
 
 	_, ok := config.Targets[target]
 	if !ok {
-		fmt.Printf("Unknown verify target %q (check your config)\n", target)
+		fmt.Printf("Unknown %s target %q (check your config)\n", action, target)
 		os.Exit(1)
 	}
 
-	// arg is like the version of the target to verify. Allow it to be empty
+	// arg something we allow the action script to be parameterized by. Allow it to be empty
 	var arg string
 	if len(args) > 0 {
 		arg = args[0]
@@ -65,14 +68,12 @@ func DoVerify(c *cli.Context) {
 	}
 	defer rpcClient.Close()
 
-	fmt.Printf("Verifying %s with payload %q\n", target, message)
-
 	ackCh := make(chan string, CHANNEL_BUFFER)
 	respCh := make(chan client.NodeResponse, CHANNEL_BUFFER)
 	q := client.QueryParam{
 		RequestAck: true,
-		Timeout:    10 * time.Second, // let serf set this default: serf.DefaultQueryTimeout()
-		Name:       "verify",
+		Timeout:    timeout,
+		Name:       action,
 		Payload:    messageEnc,
 		AckCh:      ackCh,
 		RespCh:     respCh,
@@ -100,11 +101,14 @@ func DoVerify(c *cli.Context) {
 	}
 	// filter by node name manually, cause MembersFiltered doesnt take a list of hosts (only a name regexp)
 	expectedClusterMembers := FilterMembers(clusterMembers, filterNodes)
-	fmt.Printf("%d members reporting in (filtered from %d)\n", len(expectedClusterMembers), len(clusterMembers))
+	//fmt.Printf("%d members reporting in (filtered from %d)\n", len(expectedClusterMembers), len(clusterMembers))
+	fmt.Printf("%s %s %s on %d/%d hosts matching %v %v\n", action, message.Target,
+		message.Argument, len(expectedClusterMembers), len(clusterMembers), filterTags, filterNodes)
 
 	// track our incoming acks and responses
 	acks := []string{}
 	resps := []client.NodeResponse{}
+	errorResponses := []QueryResponse{}
 	pendingAcks, pendingResponses := true, true
 	for pendingAcks || pendingResponses {
 		select {
@@ -131,6 +135,7 @@ func DoVerify(c *cli.Context) {
 				if queryResponse.Err != nil {
 					status = "ERROR"
 					output = queryResponse.Err.Error()
+					errorResponses = append(errorResponses, queryResponse)
 				}
 				fmt.Printf("%s %s says %q\n", status, resp.From, output)
 				resps = append(resps, resp)
@@ -138,6 +143,18 @@ func DoVerify(c *cli.Context) {
 		default: //chill out, squire! no messages
 		}
 	}
-	fmt.Printf("Got %d acks and %d responses in %s\n", len(acks), len(resps), q.Timeout.String())
+	var ackPct float64 = float64(len(acks)) / float64(len(expectedClusterMembers)) * 100.0
+	var respPct float64 = float64(len(resps)) / float64(len(expectedClusterMembers)) * 100.0
+	var errPct float64 = float64(len(errorResponses)) / float64(len(expectedClusterMembers)) * 100.0
+	//TODO this should show the actual duration of the query, not the timeout...
+	fmt.Printf("%d/%d (%.1f%%) ACKed and %d/%d (%.1f%%) responded in %s\n",
+		len(acks), len(expectedClusterMembers), ackPct,
+		len(resps), len(expectedClusterMembers), respPct,
+		q.Timeout.String())
+	fmt.Printf("%d/%d (%.1f%%) reported errors\n",
+		len(errorResponses), len(expectedClusterMembers), errPct)
+	if len(errorResponses) > 0 {
+		os.Exit(2)
+	}
 
 }

@@ -96,10 +96,19 @@ func main() {
 		},
 
 		{
-			Name:   "deploy",
-			Flags:  []cli.Flag{},
+			Name: "deploy",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "hosts",
+					Usage: "Only check status of these hosts (comma separated list)",
+				},
+				cli.StringSliceFlag{
+					Name:  "tag",
+					Usage: `Restrict deploy by requiring tag on host (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
+				},
+			},
 			Usage:  "Perform a deploy to a target",
-			Action: DoDeploy,
+			Action: DoQuery,
 			Before: LoadConfig,
 		},
 		{
@@ -111,11 +120,11 @@ func main() {
 				},
 				cli.StringSliceFlag{
 					Name:  "tag",
-					Usage: `Filter by requiring tag on agent (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
+					Usage: `Restrict verify by requiring tag on host (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
 				},
 			},
 			Usage:  "Verify a deploy target",
-			Action: DoVerify,
+			Action: DoQuery,
 			Before: LoadConfig,
 		},
 
@@ -124,11 +133,11 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "hosts",
-					Usage: "Only verify these hosts (comma separated list)",
+					Usage: "Only check status of these hosts (comma separated list)",
 				},
 				cli.StringSliceFlag{
 					Name:  "tag",
-					Usage: `Filter by requiring tag on agent (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
+					Usage: `Only show status of hosts with tag (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
 				},
 			},
 			Usage:  "Check the status of all cluster members",
