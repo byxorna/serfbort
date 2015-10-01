@@ -55,6 +55,8 @@ func DoQuery(action string) func(c *cli.Context) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+		// always restrict queries to agent=true so we only get responses from agents, not coordinating masters
+		filterTags["agent"] = "true"
 
 		//filter query for only tags matching these
 		//fmt.Printf("Got filternodes %v and filtertags %v\n", filterNodes, filterTags)

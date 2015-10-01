@@ -48,6 +48,12 @@ func StartAgent(c *cli.Context) {
 		}
 		serfConfig.Tags = tagsLoaded
 	}
+	// always ensure that the agent tag is set to true :)
+	if serfConfig.Tags == nil {
+		serfConfig.Tags = map[string]string{}
+	}
+	serfConfig.Tags["agent"] = "true"
+
 	if c.IsSet("name") {
 		serfConfig.NodeName = c.String("name")
 	}

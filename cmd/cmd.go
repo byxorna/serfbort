@@ -38,7 +38,6 @@ func (r Runner) Run() (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Running template %v\n", tmpl)
 	buf := new(bytes.Buffer)
 	if err := tmpl.Execute(buf, TemplateData{r.argument}); err != nil {
 		return nil, err
