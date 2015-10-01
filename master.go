@@ -82,12 +82,11 @@ type MasterEventHandler struct{}
 func (m *MasterEventHandler) HandleEvent(e serf.Event) {
 	switch evt := e.(type) {
 	case *serf.Query:
-		log.Printf("%s: payload %q", evt.EventType(), evt.Payload)
-		/* we dont need to keep track of queries on the master...
-		m.Lock()
-		defer m.Unlock()
-		m.Queries = append(m.Queries, evt)
-		*/
+		message, err := DecodeMessagePayload(evt.Payload)
+		if err != nil {
+			log.Printf("[ERROR] unable to decode payload: %s", err)
+		}
+		log.Printf("%s %s: %q", evt.EventType(), evt.Name, message.Argument)
 	case serf.UserEvent:
 		log.Printf("%s: %s with payload %q (coalescable: %t)", evt.EventType(), evt.Name, evt.Payload, evt.Coalesce)
 	case serf.MemberEvent:
