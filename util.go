@@ -24,7 +24,10 @@ func parseTagArgs(tagsUnparsed []string) (map[string]string, error) {
 
 // parses a string that looks like host1,host2,host3 into a list of hosts
 func parseHostArgs(hostsUnparsed string) []string {
-	hosts := strings.Split(hostsUnparsed, ",")
+	hosts := []string{}
+	if hostsUnparsed != "" {
+		hosts = strings.Split(hostsUnparsed, ",")
+	}
 	return hosts
 }
 
@@ -40,13 +43,16 @@ func keyToBytes(key string) ([]byte, error) {
 // so we implement it ourselves after the query is returned. If no names are provided,
 // return the list of members as is; no filtering takes place.
 func FilterMembers(members []client.Member, filterNames []string) []client.Member {
+	if len(filterNames) == 0 {
+		return members
+	}
 	filteredMembers := []client.Member{}
-	if len(filterNames) > 0 {
-		sort.Sort(SortableStringSlice(filterNames))
-		for _, m := range members {
-			if Contains(filterNames, m.Name) {
-				filteredMembers = append(filteredMembers, m)
-			}
+	sort.Sort(SortableStringSlice(filterNames))
+	for _, m := range members {
+		fmt.Println(m)
+		if Contains(filterNames, m.Name) {
+			fmt.Println(m.Name + " is in list of names")
+			filteredMembers = append(filteredMembers, m)
 		}
 	}
 	return filteredMembers

@@ -22,7 +22,6 @@ TODO
 
 # TODO
 
-* implement tag filtering for messages from deploy messages (encode target tags in payload?)
 * hook shutdown properly for master+agent so they send leave messages
 * make agents rejoin cluster (tune settings for rejoin?)
 

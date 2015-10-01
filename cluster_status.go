@@ -12,15 +12,12 @@ import (
 func DoClusterStatus(c *cli.Context) {
 	rpcAddress := c.GlobalString("rpc")
 	rpcAuthKey := c.GlobalString("rpc-auth")
-	statusFilter, nameFilter := "", ""
 	filterNodes := parseHostArgs(c.String("hosts"))
 	tagFilter, err := parseTagArgs(c.StringSlice("tag"))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	fmt.Printf("Checking cluster status (tags: %v, hosts: %v)\n", tagFilter, filterNodes)
 
 	rpcConfig := client.Config{Addr: rpcAddress, AuthKey: rpcAuthKey}
 	rpcClient, err := client.ClientFromConfig(&rpcConfig)
@@ -29,7 +26,7 @@ func DoClusterStatus(c *cli.Context) {
 		os.Exit(1)
 	}
 	defer rpcClient.Close()
-	members, err := rpcClient.MembersFiltered(tagFilter, statusFilter, nameFilter)
+	members, err := rpcClient.MembersFiltered(tagFilter, "", "")
 	if err != nil {
 		fmt.Printf("Error retrieving members: %s\n", err)
 		os.Exit(1)
