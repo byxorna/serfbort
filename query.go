@@ -22,25 +22,36 @@ func DoQuery(action string) func(c *cli.Context) {
 	// is. Ideally, c.Command.Name is populated to be the command name (i.e. "verify") so we can get rid of
 	// this crazy closure.
 	return func(c *cli.Context) {
+
+		// allow error handlers to set exitcode and return, and still close and clients, and then call os.Exit
+		// once that stuff is done.
+		exitcode := 0
+		timeStart := time.Now()
+		defer func(i int) { os.Exit(i) }(exitcode)
+
 		rpcAddress := c.GlobalString("rpc")
 		rpcAuthKey := c.GlobalString("rpc-auth")
 		timeout := 10 * time.Second //TODO(gabe) make this configurable
 		args := c.Args()
 		if len(args) < 1 {
 			fmt.Printf("%s requires a target\n", action)
-			os.Exit(1)
+			exitcode = 1
+			return
 		}
 		target := args[0]
 		args = args[1:]
 
 		if action == "" {
-			panic(fmt.Sprintf("FUCK command name is empty: %+v %s", c.App, target))
+			fmt.Println("action cannot be empty!")
+			exitcode = 1
+			return
 		}
 
 		_, ok := config.Targets[target]
 		if !ok {
 			fmt.Printf("Unknown %s target %q (check your config)\n", action, target)
-			os.Exit(1)
+			exitcode = 1
+			return
 		}
 
 		// arg something we allow the action script to be parameterized by. Allow it to be empty
@@ -53,7 +64,8 @@ func DoQuery(action string) func(c *cli.Context) {
 		filterTags, err := parseTagArgs(c.StringSlice("tag"))
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(1)
+			exitcode = 1
+			return
 		}
 		// always restrict queries to agent=true so we only get responses from agents, not coordinating masters
 		filterTags["agent"] = "true"
@@ -68,16 +80,18 @@ func DoQuery(action string) func(c *cli.Context) {
 		messageEnc, err := message.Encode()
 		if err != nil {
 			fmt.Printf("Unable to encode payload: %s\n", err)
-			os.Exit(1)
+			exitcode = 1
+			return
 		}
 
 		rpcConfig := client.Config{Addr: rpcAddress, AuthKey: rpcAuthKey}
 		rpcClient, err := client.ClientFromConfig(&rpcConfig)
 		if err != nil {
 			fmt.Printf("Unable to connect to RPC at %s: %s\n", rpcAddress, err)
-			os.Exit(1)
+			exitcode = 1
+			return
 		}
-		defer rpcClient.Close()
+		defer func() { rpcClient.Close() }()
 
 		ackCh := make(chan string, CHANNEL_BUFFER)
 		respCh := make(chan client.NodeResponse, CHANNEL_BUFFER)
@@ -100,7 +114,8 @@ func DoQuery(action string) func(c *cli.Context) {
 		err = rpcClient.Query(&q)
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(1)
+			exitcode = 1
+			return
 		}
 
 		//TODO determine how many nodes we _should_ be hearing from, so we can display percentages...
@@ -108,58 +123,52 @@ func DoQuery(action string) func(c *cli.Context) {
 		clusterMembers, err := rpcClient.MembersFiltered(filterTags, "", "")
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(1)
+			exitcode = 1
+			return
 		}
 		// filter by node name manually, cause MembersFiltered doesnt take a list of hosts (only a name regexp)
 		expectedClusterMembers := FilterMembers(clusterMembers, filterNodes)
-		//fmt.Printf("%d members reporting in (filtered from %d)\n", len(expectedClusterMembers), len(clusterMembers))
-		fmt.Printf("%s %s %s on %d/%d hosts matching %v %v\n", action, message.Target,
-			message.Argument, len(expectedClusterMembers), len(clusterMembers), filterTags, filterNodes)
+		fmt.Printf("%s %s %s on %d hosts matching %v %v (timeout: %s)\n", action, message.Target,
+			message.Argument, len(expectedClusterMembers), filterTags, filterNodes, timeout.String())
 
 		// track our incoming acks and responses
 		acks := []string{}
 		resps := []client.NodeResponse{}
 		errorResponses := []QueryResponse{}
-		pendingAcks, pendingResponses := true, true
-		for pendingAcks || pendingResponses {
+
+		for {
 			select {
-			case ack, open := <-ackCh:
-				if !open {
-					// channel was closed, so lets get outta here
-					fmt.Println("Ack channel is closed!")
-					pendingAcks = false
-				} else {
-					acks = append(acks, ack)
+			case ack := <-ackCh:
+				acks = append(acks, ack)
+			case resp := <-respCh:
+				queryResponse, err := DecodeQueryResponse(resp.Payload)
+				if err != nil {
+					fmt.Printf("Unable to decode response from %s: %s\n", resp.From, err)
+					continue
 				}
-			case resp, open := <-respCh:
-				if !open {
-					fmt.Println("Response channel is closed")
-					pendingResponses = false
+				status, output := "", ""
+				if queryResponse.Err != nil || queryResponse.Status != 0 {
+					// something actually broke in serfbort
+					status = "ERROR"
+					if queryResponse.Err != nil {
+						output += strings.TrimSpace(*queryResponse.Err) + ": "
+					}
+					output += strings.TrimSpace(queryResponse.Output)
+					errorResponses = append(errorResponses, queryResponse)
 				} else {
-					queryResponse, err := DecodeQueryResponse(resp.Payload)
-					if err != nil {
-						fmt.Printf("Unable to decode response from %s: %s\n", resp.From, err)
-						continue
-					}
-					status, output := "", ""
-					if queryResponse.Err != nil || queryResponse.Status != 0 {
-						// something actually broke in serfbort
-						status = "ERROR"
-						if queryResponse.Err != nil {
-							output += strings.TrimSpace(*queryResponse.Err) + ": "
-						}
-						output += strings.TrimSpace(queryResponse.Output)
-						errorResponses = append(errorResponses, queryResponse)
-					} else {
-						status = "OK   "
-						output = strings.TrimSpace(queryResponse.Output)
-					}
-					fmt.Printf("%s %s: %s\n", status, resp.From, output)
-					resps = append(resps, resp)
+					status = "OK   "
+					output = strings.TrimSpace(queryResponse.Output)
 				}
+				fmt.Printf("%s %s: %s\n", status, resp.From, output)
+				resps = append(resps, resp)
 			default: //chill out, squire! no messages
 			}
+			if len(resps) >= len(expectedClusterMembers) {
+				//fmt.Println("get outta here! we got what we came for")
+				break
+			}
 		}
+		duration := time.Since(timeStart)
 		var ackPct float64 = float64(len(acks)) / float64(len(expectedClusterMembers)) * 100.0
 		var respPct float64 = float64(len(resps)) / float64(len(expectedClusterMembers)) * 100.0
 		var errPct float64 = float64(len(errorResponses)) / float64(len(expectedClusterMembers)) * 100.0
@@ -167,11 +176,12 @@ func DoQuery(action string) func(c *cli.Context) {
 		fmt.Printf("%d/%d (%.1f%%) ACKed and %d/%d (%.1f%%) responded in %s\n",
 			len(acks), len(expectedClusterMembers), ackPct,
 			len(resps), len(expectedClusterMembers), respPct,
-			q.Timeout.String())
+			duration.String())
 		fmt.Printf("%d/%d (%.1f%%) reported errors\n",
 			len(errorResponses), len(expectedClusterMembers), errPct)
 		if len(errorResponses) > 0 {
-			os.Exit(2)
+			exitcode = 2
+			return
 		}
 
 	}

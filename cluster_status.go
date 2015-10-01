@@ -14,22 +14,29 @@ func DoClusterStatus(c *cli.Context) {
 	rpcAuthKey := c.GlobalString("rpc-auth")
 	filterNodes := parseHostArgs(c.String("hosts"))
 	tagFilter, err := parseTagArgs(c.StringSlice("tag"))
+
+	exitcode := 0
+	defer func(i int) { os.Exit(i) }(exitcode)
+
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
+		exitcode = 1
+		return
 	}
 
 	rpcConfig := client.Config{Addr: rpcAddress, AuthKey: rpcAuthKey}
 	rpcClient, err := client.ClientFromConfig(&rpcConfig)
 	if err != nil {
 		fmt.Printf("Unable to connect to RPC at %s: %s\n", rpcAddress, err)
-		os.Exit(1)
+		exitcode = 1
+		return
 	}
 	defer rpcClient.Close()
 	members, err := rpcClient.MembersFiltered(tagFilter, "", "")
 	if err != nil {
 		fmt.Printf("Error retrieving members: %s\n", err)
-		os.Exit(1)
+		exitcode = 1
+		return
 	}
 
 	// filter the list of members returned for only those matching our -hosts filter if present

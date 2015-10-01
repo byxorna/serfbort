@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 
-	//"github.com/hashicorp/serf/client"
 	"github.com/codegangsta/cli"
 )
 
