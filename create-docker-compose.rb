@@ -2,7 +2,7 @@
 
 require 'yaml'
 
-@nagent = $1 || 2
+@nagent = ARGV[0].to_i || 2
 $stderr.puts "Creating docker-compose.yml for 1 master and #{@nagent} agents"
 
 # the docker-compose.yaml
@@ -21,7 +21,7 @@ $stderr.puts "Creating docker-compose.yml for 1 master and #{@nagent} agents"
 #@links = ["master"]
 #(0..@nagent).each{|x| @links << "agent#{x}"}
 
-(0..@nagent).each do |nagent|
+(0...@nagent).each do |nagent|
 
   name = "agent#{nagent}"
   listenport = 7947+nagent

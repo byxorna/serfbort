@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/codegangsta/cli"
 )
@@ -105,6 +106,11 @@ func main() {
 					Name:  "tag",
 					Usage: `Restrict deploy by requiring tag on host (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
 				},
+				cli.DurationFlag{
+					Name:  "timeout",
+					Value: 10 * time.Second,
+					Usage: "Timeout duration",
+				},
 			},
 			Usage:  "Perform a deploy to a target",
 			Action: DoQuery("deploy"), //TODO the cli.Context.Command is empty! I dont know why this is the case, but hack around it
@@ -120,6 +126,11 @@ func main() {
 				cli.StringSliceFlag{
 					Name:  "tag",
 					Usage: `Restrict verify by requiring tag on host (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
+				},
+				cli.DurationFlag{
+					Name:  "timeout",
+					Value: 10 * time.Second,
+					Usage: "Timeout duration",
 				},
 			},
 			Usage:  "Verify a deploy target",

@@ -31,7 +31,10 @@ func DoQuery(action string) func(c *cli.Context) {
 
 		rpcAddress := c.GlobalString("rpc")
 		rpcAuthKey := c.GlobalString("rpc-auth")
-		timeout := 10 * time.Second //TODO(gabe) make this configurable
+		timeout := c.Duration("timeout")
+		if timeout == 0 {
+			timeout = 10 * time.Second
+		}
 		args := c.Args()
 		if len(args) < 1 {
 			fmt.Printf("%s requires a target\n", action)
