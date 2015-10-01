@@ -54,7 +54,30 @@ $ otto dev
 ## With docker-compose
 
 On OSX, if you are using `docker-machine` and have `docker-compose` installed...
+
+Create a docker-compose.yml with the helper script:
+```
+$ ./create-docker-compose.rb 4 > docker-compose.yml
+```
+Now run `docker-compose`:
 ```
 $ eval "$(docker-machine env dev)"
+$ docker-compose build
+...
 $ docker-compose up
+...
 ```
+
+If you want to hook into the network namespace of this compose cluster, make sure to add `--net container:serfbort_serfnet_1` to your `docker run` command, like this:
+```
+$ docker run -ti --net container:serfbort_serfnet_1 serfbort_master cluster-status
+4/4 hosts matching map[] []
+Name    Addr    Tags                    Status
+agent0  :::7947 map[]                   alive
+master  :::7946 map[master:true]        alive
+agent2  :::7949 map[]                   alive
+agent1  :::7948 map[]                   alive
+$ docker run -ti --net container:serfbort_serfnet_1 serfbort_master -config examples/config.json verify app 123
+...
+```
+
