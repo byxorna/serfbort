@@ -108,7 +108,7 @@ func main() {
 				},
 			},
 			Usage:  "Perform a deploy to a target",
-			Action: DoQuery,
+			Action: DoQuery("deploy"), //TODO the cli.Context.Command is empty! I dont know why this is the case, but hack around it
 			Before: LoadConfig,
 		},
 		{
@@ -124,7 +124,7 @@ func main() {
 				},
 			},
 			Usage:  "Verify a deploy target",
-			Action: DoQuery,
+			Action: DoQuery("verify"), //TODO the cli.Context.Command is empty! I dont know why this is the case, but hack around it
 			Before: LoadConfig,
 		},
 
