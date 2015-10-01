@@ -154,13 +154,15 @@ func handleQuery(query *serf.Query) {
 	resp := QueryResponse{
 		Output: "",
 		Err:    nil,
+		Status: 0,
 	}
 	// this makes more sense than encoding duplicate information in the payload of the query.
 	action := query.Name
 	message, err := DecodeMessagePayload(query.Payload)
 	if err != nil {
 		log.Printf("[ERROR] unable to decode payload: %s", err)
-		resp.Err = err
+		errMessage := err.Error()
+		resp.Err = &errMessage
 		respondToQuery(query, resp)
 		return
 	}
@@ -171,7 +173,8 @@ func handleQuery(query *serf.Query) {
 	target, ok := config.Targets[message.Target]
 	if !ok {
 		log.Printf("[ERROR] No target configured named %q", message.Target)
-		resp.Err = fmt.Errorf("No target named %q found in config", message.Target)
+		errMessage := fmt.Sprintf("No target named %q found in config", message.Target)
+		resp.Err = &errMessage
 		respondToQuery(query, resp)
 		return
 	}
@@ -185,13 +188,15 @@ func handleQuery(query *serf.Query) {
 		scriptTemplate = target.VerifyScript
 	default:
 		log.Printf("[ERROR] Unknown action %q! Unable to run script.", action)
-		resp.Err = fmt.Errorf("Unknown action %q for %q", action, message.Target)
+		errMessage := fmt.Sprintf("Unknown action %q for %q", action, message.Target)
+		resp.Err = &errMessage
 		respondToQuery(query, resp)
 		return
 	}
 	if scriptTemplate == "" {
 		log.Printf("[ERROR] No script configured to %s %s! Not running script.", action, message.Target)
-		resp.Err = fmt.Errorf("No script configured to %s %s", action, message.Target)
+		errMessage := fmt.Sprintf("No script configured to %s %s", action, message.Target)
+		resp.Err = &errMessage
 		respondToQuery(query, resp)
 		return
 	}
@@ -199,7 +204,9 @@ func handleQuery(query *serf.Query) {
 	outputBuf, err := runner.Run()
 	if err != nil {
 		log.Printf("[ERROR] Error running %s %s script: %s", message.Target, action, err)
-		resp.Err = err
+		errMessage := err.Error()
+		resp.Err = &errMessage
+		resp.Output = outputBuf.String()
 		respondToQuery(query, resp)
 		return
 	}

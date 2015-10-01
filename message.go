@@ -47,8 +47,9 @@ func (m MessagePayload) String() string {
 }
 
 type QueryResponse struct {
-	Output string //output of query command
-	Err    error  //error, if any
+	Output string  //output of query command
+	Err    *string //error, if any
+	Status int     //status of command
 }
 
 func DecodeQueryResponse(msg []byte) (QueryResponse, error) {

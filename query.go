@@ -139,14 +139,20 @@ func DoQuery(action string) func(c *cli.Context) {
 						fmt.Printf("Unable to decode response from %s: %s\n", resp.From, err)
 						continue
 					}
-					status := "OK   "
-					output := strings.TrimSpace(queryResponse.Output)
-					if queryResponse.Err != nil {
+					status, output := "", ""
+					if queryResponse.Err != nil || queryResponse.Status != 0 {
+						// something actually broke in serfbort
 						status = "ERROR"
-						output = queryResponse.Err.Error()
+						if queryResponse.Err != nil {
+							output += strings.TrimSpace(*queryResponse.Err) + ": "
+						}
+						output += strings.TrimSpace(queryResponse.Output)
 						errorResponses = append(errorResponses, queryResponse)
+					} else {
+						status = "OK   "
+						output = strings.TrimSpace(queryResponse.Output)
 					}
-					fmt.Printf("%s %s says %q\n", status, resp.From, output)
+					fmt.Printf("%s %s: %s\n", status, resp.From, output)
 					resps = append(resps, resp)
 				}
 			default: //chill out, squire! no messages
