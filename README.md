@@ -22,14 +22,9 @@ TODO
 
 # TODO
 
+* make encryption work!!! we need to support separate encryption keys for serf, and rpc auth keys
 * hook shutdown properly for master+agent so they send leave messages
 * make agents rejoin cluster (tune settings for rejoin?)
-
-
-* slaves get batched messages, and delayed by a bunch of time
-* lots of `[ERR] memberlist: Failed to send ping: write udp [::]:7947->[::]:7946: sendto: no route to host` on agents
-* make agents and masters use keys for encryption
-
 
 # Devving
 
