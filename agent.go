@@ -128,10 +128,6 @@ func (a *AgentEventHandler) EventLoop() {
 			log.Printf("[WARN] agent: Serf shutdown detected, quitting")
 			a.serf.Shutdown()
 			return
-
-		default:
-			// no work to do here!
-			//log.Printf("no work to do...")
 		}
 	}
 }
