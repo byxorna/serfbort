@@ -17,3 +17,7 @@ agent1:
   command: -config examples/config.json agent -name agent1 -master localhost:7946
     -listen localhost:7948
   net: container:serfnet
+collins:
+  image: tumblr/collins
+  ports:
+  - 9000:9000
