@@ -117,6 +117,27 @@ func main() {
 			Before: LoadConfig,
 		},
 		{
+			Name: "stage",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "hosts",
+					Usage: "Only check status of these hosts (comma separated list)",
+				},
+				cli.StringSliceFlag{
+					Name:  "tag",
+					Usage: `Restrict stage by requiring tag on host (tag=value) (can be a regexp like "val.*", and passed multiple times)`,
+				},
+				cli.DurationFlag{
+					Name:  "timeout",
+					Value: 10 * time.Second,
+					Usage: "Timeout duration",
+				},
+			},
+			Usage:  "Stage a deploy to a target",
+			Action: DoQuery("stage"),
+			Before: LoadConfig,
+		},
+		{
 			Name: "verify",
 			Flags: []cli.Flag{
 				cli.StringFlag{

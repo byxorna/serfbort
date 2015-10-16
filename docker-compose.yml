@@ -17,8 +17,3 @@ agent1:
   command: -config examples/config.json agent -name agent1 -master localhost:7946
     -listen localhost:7948
   net: container:serfnet
-agent2:
-  build: .
-  command: -config examples/config.json agent -name agent2 -master localhost:7946
-    -listen localhost:7949
-  net: container:serfnet
